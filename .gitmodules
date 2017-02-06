@@ -1,4 +1,4 @@
 [submodule "examples/open-simulation-interface"]
 	path = examples/open-simulation-interface
 	url = https://github.com/OpenSimulationInterface/open-simulation-interface.git
-	branch = feature/initial-build-system
+	branch = master
