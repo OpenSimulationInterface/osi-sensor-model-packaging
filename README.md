@@ -187,7 +187,8 @@ The following basic conventions apply:
 
 ## Examples
 
-An example dummy sensor model implementation is provided as a seperate
+An example dummy sensor model implementation is provided in the
+OSMPDummySensor sub-directory of the examples directory of this
 repository.  Below you can find an example modelDescription.xml
 file that would satisfy the requirements of this document for a sensor
 model FMU with one input and output and no additional features:
@@ -216,13 +217,13 @@ model FMU with one input and output and no additional features:
     <ScalarVariable name="OSMPSensorDataIn.size" valueReference="2" causality="input" variability="discrete">
       <Integer start="0"/>
     </ScalarVariable>
-    <ScalarVariable name="OSMPSensorDataOut.base.lo" valueReference="3" causality="output" variability="discrete">
+    <ScalarVariable name="OSMPSensorDataOut.base.lo" valueReference="3" causality="output" variability="discrete" initial="exact">
       <Integer start="0"/>
     </ScalarVariable>
-    <ScalarVariable name="OSMPSensorDataOut.base.hi" valueReference="4" causality="output" variability="discrete">
+    <ScalarVariable name="OSMPSensorDataOut.base.hi" valueReference="4" causality="output" variability="discrete" initial="exact">
       <Integer start="0"/>
     </ScalarVariable>
-    <ScalarVariable name="OSMPSensorDataOut.size" valueReference="5" causality="output" variability="discrete">
+    <ScalarVariable name="OSMPSensorDataOut.size" valueReference="5" causality="output" variability="discrete" initial="exact">
       <Integer start="0"/>
     </ScalarVariable>
   </ModelVariables>
