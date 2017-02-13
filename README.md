@@ -1,14 +1,18 @@
 OSI Sensor Model Packaging
 ==========================
 
-This document specifies the ways in which sensor models are to be
-packaged for use in simulation environments using FMI 2.0.
+This document specifies the ways in which sensor models using the
+[Open Simulation Interface][] are to be packaged for use in simulation
+environments using FMI 2.0.
 
 This is version 0.1 Draft of this document.
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 "SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and "OPTIONAL" in this
-document are to be interpreted as described in RFC 2119.
+document are to be interpreted as described in [RFC 2119][].
+
+[Open Simulation Interface]: https://github.com/OpenSimulationInterface/open-simulation-interface
+[RFC 2119]: https://www.ietf.org/rfc/rfc2119.txt
 
 ## FMI 2.0
 
