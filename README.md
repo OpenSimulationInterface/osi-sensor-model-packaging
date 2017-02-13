@@ -1,6 +1,8 @@
 OSI Sensor Model Packaging
 ==========================
 
+[![Build Status](https://travis-ci.org/OpenSimulationInterface/osi-sensor-model-packaging.svg?branch=master)](https://travis-ci.org/OpenSimulationInterface/osi-sensor-model-packaging)
+
 This document specifies the ways in which sensor models using the
 [Open Simulation Interface][] are to be packaged for use in simulation
 environments using FMI 2.0.
