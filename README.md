@@ -7,13 +7,16 @@ This document specifies the ways in which sensor models using the
 [Open Simulation Interface][] are to be packaged for use in simulation
 environments using FMI 2.0.
 
-This is version 0.1 Draft of this document.
+This is version 0.2.0 Draft of this document. The version number is
+to be interpreted according to the [Semantic Versioning Specification
+(SemVer) 2.0.0][SemVer2.0.0].
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 "SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and "OPTIONAL" in this
 document are to be interpreted as described in [RFC 2119][].
 
 [Open Simulation Interface]: https://github.com/OpenSimulationInterface/open-simulation-interface
+[SemVer2.0.0]: http://semver.org/spec/v2.0.0.html
 [RFC 2119]: https://www.ietf.org/rfc/rfc2119.txt
 
 ## FMI 2.0
@@ -35,8 +38,15 @@ The following basic conventions apply:
     into the `VendorAnnotations` element of the `modelDescription.xml`:
 
     ```XML
-    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.1"/></Tool>
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.2.0" osi-version="2.0.0"/></Tool>
     ```
+
+    where osi-version MUST contain the major, minor and patch
+    version number of the open simulation interface specification
+    that this model was compiled against.  This is to ensure that
+    the importing environment can determine which OSI version to
+    use prior to communicating with the FMU, which might be
+    impossible in cases of major version changes.
 
 -   The variable naming convention of the FMU MUST be `structured`.
 
