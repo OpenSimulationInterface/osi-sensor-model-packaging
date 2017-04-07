@@ -7,7 +7,7 @@ This document specifies the ways in which sensor models using the
 [Open Simulation Interface][] are to be packaged for use in simulation
 environments using FMI 2.0.
 
-This is version 0.2.0 Draft of this document. The version number is
+This is version 0.2.1 Draft of this document. The version number is
 to be interpreted according to the [Semantic Versioning Specification
 (SemVer) 2.0.0][SemVer2.0.0].
 
@@ -38,7 +38,7 @@ The following basic conventions apply:
     into the `VendorAnnotations` element of the `modelDescription.xml`:
 
     ```XML
-    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.2.0" osi-version="2.0.0"/></Tool>
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.2.1" osi-version="2.2.0"/></Tool>
     ```
 
     where osi-version MUST contain the major, minor and patch
@@ -221,7 +221,7 @@ model FMU with one input and output and no additional features:
     canNotUseMemoryManagementFunctions="true"/>
   <DefaultExperiment startTime="0.0" stepSize="0.020"/>
   <VendorAnnotations>
-    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.1"/></Tool>
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.2.1" osi-version="2.2.0"/></Tool>
   </VendorAnnotations>
   <ModelVariables>
     <ScalarVariable name="OSMPSensorDataIn.base.lo" valueReference="0" causality="input" variability="discrete">
