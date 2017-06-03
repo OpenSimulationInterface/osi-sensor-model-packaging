@@ -140,6 +140,11 @@ The following basic conventions apply:
     specified as part of the top-level `osmp:osmp` annotation, and will
     default to this value if left unspecified.
 
+    It is an error if the mime-type specified in the annotations for one
+    notional binary variable (i.e. with identical name attribute) differ,
+    or if there is not exactly one variable of each role for the same
+    name.
+
     This currently optional annotation is the basis for supporting more
     kinds of binary variables in OSMP, should the need arise.
 
@@ -227,6 +232,11 @@ The following basic conventions apply:
     `application/x-open-simulation-interface` must concur with the version
     specified as part of the top-level `osmp:osmp` annotation, and will
     default to this value if left unspecified.
+
+    It is an error if the mime-type specified in the annotations for one
+    notional binary variable (i.e. with identical name attribute) differ,
+    or if there is not exactly one variable of each role for the same
+    name.
 
     This currently optional annotation is the basis for supporting more
     kinds of binary variables in OSMP, should the need arise.
