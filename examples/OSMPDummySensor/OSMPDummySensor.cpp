@@ -157,37 +157,132 @@ fmi2Status COSMPDummySensor::doExitInitializationMode()
     return fmi2OK;
 }
 
+void rotatePoint(double x, double y, double z,double yaw,double pitch,double roll,double &rx,double &ry,double &rz)
+{
+    double matrix[3][3];
+    double cos_yaw = cos(yaw);
+    double cos_pitch = cos(pitch);
+    double cos_roll = cos(roll);
+    double sin_yaw = sin(yaw);
+    double sin_pitch = sin(pitch);
+    double sin_roll = sin(roll);
+
+    matrix[0][0] = cos_yaw*cos_pitch;  matrix[0][1]=cos_yaw*sin_pitch*sin_roll - sin_yaw*cos_roll; matrix[0][2]=cos_yaw*sin_pitch*cos_roll + sin_yaw*sin_roll;
+    matrix[1][0] = sin_yaw*cos_pitch;  matrix[1][1]=sin_yaw*sin_pitch*sin_roll + cos_yaw*cos_roll; matrix[1][2]=sin_yaw*sin_pitch*cos_roll - cos_yaw*sin_roll;
+    matrix[2][0] = -sin_pitch;         matrix[2][1]=cos_pitch*sin_roll;                            matrix[2][2]=cos_pitch*cos_roll;
+
+    rx = matrix[0][0] * x + matrix[0][1] * y + matrix[0][2] * z;
+    ry = matrix[1][0] * x + matrix[1][1] * y + matrix[1][2] * z;
+    rz = matrix[2][0] * x + matrix[2][1] * y + matrix[2][2] * z;
+}
+
 fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
 {
     DEBUGBREAK();
     osi::SensorData currentIn,currentOut;
+    double time = currentCommunicationPoint+communicationStepSize;
     if (fmi_source()) {
-        /* We act as SensorData Source, so ignore inputs */
+        /* We act as GroundTruth Source, so ignore inputs */
+        static double y_offsets[10] = { -3.0, -3.0, -3.0, -0.5, 0, 0.5, 3.0, 3.0, 3.0, 3.0 };
+        static double x_offsets[10] = { 0.0, 40.0, 100.0, 100.0, 0.0, 150.0, 5.0, 45.0, 85.0, 125.0 };
+        static double x_speeds[10] = { 29.0, 30.0, 31.0, 25.0, 26.0, 28.0, 20.0, 22.0, 22.5, 23.0 };
         currentOut.Clear();
-        currentOut.mutable_timestamp()->set_seconds((long long int)floor(currentCommunicationPoint));
-        currentOut.mutable_timestamp()->set_nanos((int)((currentCommunicationPoint - floor(currentCommunicationPoint))*1000000000.0));
+        currentOut.mutable_ego_vehicle_id()->set_value(4);
+        osi::SensorDataGroundTruth *currentSDGT = currentOut.mutable_ground_truth();
+        osi::GroundTruth *currentGT = currentSDGT->mutable_global_ground_truth();
+        currentOut.mutable_timestamp()->set_seconds((long long int)floor(time));
+        currentOut.mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
+        currentGT->mutable_timestamp()->set_seconds((long long int)floor(time));
+        currentGT->mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
         for (unsigned int i=0;i<10;i++) {
-            osi::DetectedObject *obj = currentOut.add_object();
-            obj->mutable_tracking_id()->set_value(i);
-            obj->add_ground_truth_id()->set_value(i);
-            obj->set_existence_probability(0.5);
+            osi::Vehicle *veh = currentGT->add_vehicle();
+            veh->set_type(osi::Vehicle_Type_TYPE_CAR);
+            veh->mutable_id()->set_value(i);
+            veh->set_ego_vehicle(i==4);
+            veh->mutable_light_state()->set_brake_light_state(osi::Vehicle_LightState_BrakeLightState_BRAKE_LIGHT_STATE_OFF);
+            veh->mutable_base()->mutable_dimension()->set_height(1.5);
+            veh->mutable_base()->mutable_dimension()->set_width(2.0);
+            veh->mutable_base()->mutable_dimension()->set_length(5.0);
+            veh->mutable_base()->mutable_position()->set_x(x_offsets[i]+time*x_speeds[i]);
+            veh->mutable_base()->mutable_position()->set_y(y_offsets[i]+sin(time/x_speeds[i])*0.25);
+            veh->mutable_base()->mutable_position()->set_z(0.0);
+            veh->mutable_base()->mutable_velocity()->set_x(x_speeds[i]);
+            veh->mutable_base()->mutable_velocity()->set_y(cos(time/x_speeds[i])*0.25/x_speeds[i]);
+            veh->mutable_base()->mutable_velocity()->set_z(0.0);
+            veh->mutable_base()->mutable_acceleration()->set_x(0.0);
+            veh->mutable_base()->mutable_acceleration()->set_y(-sin(time/x_speeds[i])*0.25/(x_speeds[i]*x_speeds[i]));
+            veh->mutable_base()->mutable_acceleration()->set_z(0.0);
+            veh->mutable_base()->mutable_orientation()->set_pitch(0.0);
+            veh->mutable_base()->mutable_orientation()->set_roll(0.0);
+            veh->mutable_base()->mutable_orientation()->set_yaw(0.0);
+            veh->mutable_base()->mutable_orientation_rate()->set_pitch(0.0);
+            veh->mutable_base()->mutable_orientation_rate()->set_roll(0.0);
+            veh->mutable_base()->mutable_orientation_rate()->set_yaw(0.0);
+            normal_log("OSI","GT: Adding Vehicle %d[%d] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)",i,veh->id().value(),veh->base().position().x(),veh->base().position().y(),veh->base().position().z(),veh->base().velocity().x(),veh->base().velocity().y(),veh->base().velocity().z());
         }
         set_fmi_sensor_data_out(currentOut);
         set_fmi_valid(true);
         set_fmi_count(currentOut.object_size());
     } else if (get_fmi_sensor_data_in(currentIn)) {
+        double ego_x=0, ego_y=0, ego_z=0;
+        osi::Identifier ego_id = currentIn.ego_vehicle_id();
+        normal_log("OSI","Looking for EgoVehicle with ID: %d",ego_id.value());
+        for_each(currentIn.ground_truth().global_ground_truth().vehicle().begin(),currentIn.ground_truth().global_ground_truth().vehicle().end(),
+            [this, ego_id, &ego_x, &ego_y, &ego_z](const osi::Vehicle& veh) {
+                normal_log("OSI","Vehicle with ID %d is EgoVehicle: %d",veh.id().value(), veh.ego_vehicle() ? 1:0);
+                if ((veh.id().value() == ego_id.value()) || (veh.ego_vehicle())) {
+                    normal_log("OSI","Found EgoVehicle with ID: %d",veh.id().value());
+                    ego_x = veh.base().position().x();
+                    ego_y = veh.base().position().y();
+                    ego_z = veh.base().position().z();
+                }
+            });
+        normal_log("OSI","Current Ego Position: %f,%f,%f", ego_x, ego_y, ego_z);
+
         /* Clear Output */
         currentOut.Clear();
         /* Copy Everything */
         currentOut.MergeFrom(currentIn);
         /* Adjust Timestamps and Ids */
-        currentOut.mutable_timestamp()->set_seconds((long long int)floor(currentCommunicationPoint));
-        currentOut.mutable_timestamp()->set_nanos((int)((currentCommunicationPoint - floor(currentCommunicationPoint))*1000000000.0));
-        for_each(currentOut.mutable_object()->begin(),currentOut.mutable_object()->end(),
-            [this](osi::DetectedObject& obj) {
-                obj.mutable_tracking_id()->set_value(obj.tracking_id().value()+10);
-                obj.set_existence_probability(obj.existence_probability()*0.9);
+        currentOut.mutable_timestamp()->set_seconds((long long int)floor(time));
+        currentOut.mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
+        currentOut.mutable_object()->Clear();
+
+        int i=0;
+        for_each(currentIn.ground_truth().global_ground_truth().vehicle().begin(),currentIn.ground_truth().global_ground_truth().vehicle().end(),
+            [this,&i,&currentOut,ego_id,ego_x,ego_y,ego_z](const osi::Vehicle& veh) {
+                if (veh.id().value() != ego_id.value()) {
+					// NOTE: We currently do not take sensor mounting position into account,
+					// i.e. sensor-relative coordinates are relative to center of bounding box
+					// of ego vehicle currently.
+                    double trans_x = veh.base().position().x()-ego_x;
+                    double trans_y = veh.base().position().y()-ego_y;
+                    double trans_z = veh.base().position().z()-ego_z;
+                    double rel_x,rel_y,rel_z;
+                    rotatePoint(trans_x,trans_y,trans_z,veh.base().orientation().yaw(),veh.base().orientation().pitch(),veh.base().orientation().roll(),rel_x,rel_y,rel_z);
+                    double distance = sqrt(rel_x*rel_x + rel_y*rel_y + rel_z*rel_z);
+                    if ((distance <= 150.0) && (rel_x/distance > 0.866025)) {
+                        osi::DetectedObject *obj = currentOut.mutable_object()->Add();
+                        obj->mutable_tracking_id()->set_value(i);
+                        obj->mutable_object()->mutable_position()->set_x(veh.base().position().x());
+                        obj->mutable_object()->mutable_position()->set_y(veh.base().position().y());
+                        obj->mutable_object()->mutable_position()->set_z(veh.base().position().z());
+                        obj->mutable_object()->mutable_dimension()->set_length(veh.base().dimension().length());
+                        obj->mutable_object()->mutable_dimension()->set_width(veh.base().dimension().width());
+                        obj->mutable_object()->mutable_dimension()->set_height(veh.base().dimension().height());
+                        obj->set_existence_probability(cos((distance-75.0)/75.0));
+                        normal_log("OSI","Output Vehicle %d[%d] Probability %f Relative Position: %f,%f,%f (%f,%f,%f)",i,veh.id().value(),obj->existence_probability(),rel_x,rel_y,rel_z,obj->object().position().x(),obj->object().position().y(),obj->object().position().z());
+                        i++;
+                    } else {
+                        normal_log("OSI","Ignoring Vehicle %d[%d] Outside Sensor Scope Relative Position: %f,%f,%f (%f,%f,%f)",i,veh.id().value(),veh.base().position().x()-ego_x,veh.base().position().y()-ego_y,veh.base().position().z()-ego_z,veh.base().position().x(),veh.base().position().y(),veh.base().position().z());
+                    }
+                }
+                else
+                {
+                    normal_log("OSI","Ignoring EGO Vehicle %d[%d] Relative Position: %f,%f,%f (%f,%f,%f)",i,veh.id().value(),veh.base().position().x()-ego_x,veh.base().position().y()-ego_y,veh.base().position().z()-ego_z,veh.base().position().x(),veh.base().position().y(),veh.base().position().z());
+                }
             });
+        normal_log("OSI","Mapped %d vehicles to output", i);
         /* Serialize */
         set_fmi_sensor_data_out(currentOut);
         set_fmi_valid(true);
