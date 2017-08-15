@@ -181,6 +181,7 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     DEBUGBREAK();
     osi::SensorData currentIn,currentOut;
     double time = currentCommunicationPoint+communicationStepSize;
+    normal_log("OSI","Calculating Sensor at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
     if (fmi_source()) {
         /* We act as GroundTruth Source, so ignore inputs */
         static double y_offsets[10] = { 3.0, 3.0, 3.0, 0.5, 0, -0.5, -3.0, -3.0, -3.0, -3.0 };
@@ -289,6 +290,7 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         set_fmi_count(currentOut.object_size());
     } else {
         /* We have no valid input, so no valid output */
+        normal_log("OSI","No valid input, therefore providing no valid output.");
         reset_fmi_sensor_data_out();
         set_fmi_valid(false);
         set_fmi_count(0);
