@@ -14,14 +14,19 @@ extern "C" {
 #define MODEL_IDENTIFIER OSMPDummySensor10
 #include "fmiFunctions.h"
 }
-/* Enable Logging to File for Debug Builds */
-#ifndef NDEBUG
-#ifdef _WIN32
-#define PRIVATE_LOG_PATH "C:\\TEMP\\OSMPDummySensor10Log.log"
-#else
-#define PRIVATE_LOG_PATH "/tmp/OSMPDummySensorLog10.log"
-#endif
-#endif
+
+/* 
+ * Logging Control
+ *
+ * Logging is controlled via three definitions:
+ *
+ * - If PRIVATE_LOG_PATH is defined it gives the name of a file
+ *   that is to be used as a private log file.
+ * - If PUBLIC_LOGGING is defined then we will (also) log to
+ *   the FMI logging facility where appropriate.
+ * - If VERBOSE_FMI_LOGGING is defined then logging of basic
+ *   FMI calls is enabled, which can get very verbose.
+ */
 
 /*
  * Variable Definitions
@@ -106,7 +111,8 @@ protected:
     static ofstream private_log_file;
 #endif
 
-    static void private_log_global(const char* format, ...) {
+    static void fmi_verbose_log_global(const char* format, ...) {
+#ifdef VERBOSE_FMI_LOGGING
 #ifdef PRIVATE_LOG_PATH
         va_list ap;
         va_start(ap, format);
@@ -119,27 +125,53 @@ protected:
 #else
             vsnprintf(buffer, 1024, format, ap);
 #endif
-            private_log_file << "OSMPDummySensor10" << "::Global: " << buffer << endl;
+            private_log_file << "OSMPDummySensor10" << "::Global:FMI: " << buffer << endl;
             private_log_file.flush();
         }
+#endif
 #endif
     }
-    void private_log(const char* format, ...) {
-#ifdef PRIVATE_LOG_PATH
-        va_list ap;
-        va_start(ap, format);
+
+    void internal_log(const char* category, const char* format, va_list arg)
+    {
+#if defined(PRIVATE_LOG_PATH) || defined(PUBLIC_LOGGING)
         char buffer[1024];
+#ifdef _WIN32
+        vsnprintf_s(buffer, 1024, format, arg);
+#else
+        vsnprintf(buffer, 1024, format, arg);
+#endif
+#ifdef PRIVATE_LOG_PATH
         if (!private_log_file.is_open())
             private_log_file.open(PRIVATE_LOG_PATH, ios::out | ios::app);
         if (private_log_file.is_open()) {
-#ifdef _WIN32
-            vsnprintf_s(buffer, 1024, format, ap);
-#else
-            vsnprintf(buffer, 1024, format, ap);
-#endif
-            private_log_file << "OSMPDummySensor10" << "::" << instanceName << "<" << ((void*)this) << ">: " << buffer << endl;
+            private_log_file << "OSMPDummySensor10" << "::" << instanceName << "<" << ((void*)this) << ">:" << category << ": " << buffer << endl;
             private_log_file.flush();
         }
+#endif
+#ifdef PUBLIC_LOGGING
+        if (loggingOn)
+            functions.logger((fmiComponent)this,instanceName.c_str(),fmiOK,category,buffer);
+#endif
+#endif
+    }
+
+    void fmi_verbose_log(const char* format, ...) {
+#if  defined(VERBOSE_FMI_LOGGING) && (defined(PRIVATE_LOG_PATH) || defined(PUBLIC_LOGGING))
+        va_list ap;
+        va_start(ap, format);
+        internal_log("FMI",format,ap);
+        va_end(ap);
+#endif
+    }
+
+    /* Normal Logging */
+    void normal_log(const char* category, const char* format, ...) {
+#if defined(PRIVATE_LOG_PATH) || defined(PUBLIC_LOGGING)
+        va_list ap;
+        va_start(ap, format);
+        internal_log(category,format,ap);
+        va_end(ap);
 #endif
     }
 
