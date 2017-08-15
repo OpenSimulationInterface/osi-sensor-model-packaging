@@ -183,7 +183,7 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     double time = currentCommunicationPoint+communicationStepSize;
     if (fmi_source()) {
         /* We act as GroundTruth Source, so ignore inputs */
-        static double y_offsets[10] = { -3.0, -3.0, -3.0, -0.5, 0, 0.5, 3.0, 3.0, 3.0, 3.0 };
+        static double y_offsets[10] = { 3.0, 3.0, 3.0, 0.5, 0, -0.5, -3.0, -3.0, -3.0, -3.0 };
         static double x_offsets[10] = { 0.0, 40.0, 100.0, 100.0, 0.0, 150.0, 5.0, 45.0, 85.0, 125.0 };
         static double x_speeds[10] = { 29.0, 30.0, 31.0, 25.0, 26.0, 28.0, 20.0, 22.0, 22.5, 23.0 };
         currentOut.Clear();
