@@ -15,26 +15,44 @@
     canNotUseMemoryManagementFunctions="true"/>
   <DefaultExperiment startTime="0.0" stepSize="0.020"/>
   <VendorAnnotations>
-    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.2.0" osi-version="2.0.0"/></Tool>
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.3.0" osi-version="2.2.0"/></Tool>
   </VendorAnnotations>
   <ModelVariables>
     <ScalarVariable name="OSMPSensorDataIn.base.lo" valueReference="0" causality="input" variability="discrete">
       <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataIn" role="base.lo" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
     </ScalarVariable>
     <ScalarVariable name="OSMPSensorDataIn.base.hi" valueReference="1" causality="input" variability="discrete">
       <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataIn" role="base.hi" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
     </ScalarVariable>
     <ScalarVariable name="OSMPSensorDataIn.size" valueReference="2" causality="input" variability="discrete">
       <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataIn" role="size" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
     </ScalarVariable>
     <ScalarVariable name="OSMPSensorDataOut.base.lo" valueReference="3" causality="output" variability="discrete" initial="exact">
       <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.lo" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
     </ScalarVariable>
     <ScalarVariable name="OSMPSensorDataOut.base.hi" valueReference="4" causality="output" variability="discrete" initial="exact">
       <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.hi" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
     </ScalarVariable>
     <ScalarVariable name="OSMPSensorDataOut.size" valueReference="5" causality="output" variability="discrete" initial="exact">
       <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="size" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
     </ScalarVariable>
     <ScalarVariable name="source" valueReference="0" causality="parameter" variability="fixed">
       <Boolean start="false"/>

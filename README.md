@@ -7,7 +7,7 @@ This document specifies the ways in which sensor models using the
 [Open Simulation Interface][] are to be packaged for use in simulation
 environments using FMI 2.0.
 
-This is version 0.2.1 Draft of this document. The version number is
+This is version 0.3.0 Draft of this document. The version number is
 to be interpreted according to the [Semantic Versioning Specification
 (SemVer) 2.0.0][SemVer2.0.0].
 
@@ -38,7 +38,7 @@ The following basic conventions apply:
     into the `VendorAnnotations` element of the `modelDescription.xml`:
 
     ```XML
-    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.2.1" osi-version="2.2.0"/></Tool>
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.3.0" osi-version="2.2.0"/></Tool>
     ```
 
     where osi-version MUST contain the major, minor and patch
@@ -120,6 +120,39 @@ The following basic conventions apply:
     no valid sensor data protocol buffer available and must handle this
     case safely.
 
+-   All sensor data input variables SHOULD contain an annotation
+    of the following form in the `Annotations` child element of their
+    `ScalarVariable` element of the `modelDescription.xml`:
+
+    ```XML
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="<prefix>" role="<role>" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+    ```
+
+    where `<prefix>` is the prefix as defined above, and `<role>` is either
+    `base.lo`, `base.hi` or `size`, depending on the variable.
+
+    This annotation marks the variable as belonging to a notional binary
+    variable named `<prefix>`, with the given variable having the specified
+    `<role>`, and the transported binary content being specified by the
+    `mime-type` attribute, in this case OSI data of version 2.2.0 with 
+    data encoded as osi::SensorData.  The version parameter for MIME type
+    `application/x-open-simulation-interface` must concur with the version
+    specified as part of the top-level `osmp:osmp` annotation, and will
+    default to this value if left unspecified.
+
+    It is an error if the mime-type specified in the annotations for one
+    notional binary variable (i.e. with identical name attribute) differ,
+    or if there is not exactly one variable of each role for the same
+    name.
+
+    This currently optional annotation is the basis for supporting more
+    kinds of binary variables in OSMP, should the need arise.
+
+-   The FMU MUST NOT contain any variable that is named `<prefix>`: This
+    restriction ensures that there is no conflict between the notional
+    binary variable defined for the sensor input and another variable.
+
+
 -   The guaranteed lifetime of the sensor data protocol buffer pointer
     provided as input to the FMU MUST be from the time of the call to 
     `fmi2SetInteger` that provides those values until the end of the
@@ -180,6 +213,38 @@ The following basic conventions apply:
     sensor data protocol buffer is available and must handle this case
     safely.
 
+-   All sensor data output variables SHOULD contain an annotation
+    of the following form in the `Annotations` child element of their
+    `ScalarVariable` element of the `modelDescription.xml`:
+
+    ```XML
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="<prefix>" role="<role>" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+    ```
+
+    where `<prefix>` is the prefix as defined above, and `<role>` is either
+    `base.lo`, `base.hi` or `size`, depending on the variable.
+
+    This annotation marks the variable as belonging to a notional binary
+    variable named `<prefix>`, with the given variable having the specified
+    `<role>`, and the transported binary content being specified by the
+    `mime-type` attribute, in this case OSI data of version 2.2.0 with 
+    data encoded as osi::SensorData.  The version parameter for MIME type
+    `application/x-open-simulation-interface` must concur with the version
+    specified as part of the top-level `osmp:osmp` annotation, and will
+    default to this value if left unspecified.
+
+    It is an error if the mime-type specified in the annotations for one
+    notional binary variable (i.e. with identical name attribute) differ,
+    or if there is not exactly one variable of each role for the same
+    name.
+
+    This currently optional annotation is the basis for supporting more
+    kinds of binary variables in OSMP, should the need arise.
+
+-   The FMU MUST NOT contain any variable that is named `<prefix>`: This
+    restriction ensures that there is no conflict between the notional
+    binary variable defined for the sensor input and another variable.
+
 -   The guaranteed lifetime of the sensor data protocol buffer pointer
     provided as output by the FMU MUST be from the end of the call to
     `fmi2DoStep` that calculated this buffer until the beginning of the
@@ -221,26 +286,44 @@ model FMU with one input and output and no additional features:
     canNotUseMemoryManagementFunctions="true"/>
   <DefaultExperiment startTime="0.0" stepSize="0.020"/>
   <VendorAnnotations>
-    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.2.1" osi-version="2.2.0"/></Tool>
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.3.0" osi-version="2.2.0"/></Tool>
   </VendorAnnotations>
   <ModelVariables>
     <ScalarVariable name="OSMPSensorDataIn.base.lo" valueReference="0" causality="input" variability="discrete">
       <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataIn" role="base.lo" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
     </ScalarVariable>
     <ScalarVariable name="OSMPSensorDataIn.base.hi" valueReference="1" causality="input" variability="discrete">
       <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataIn" role="base.hi" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
     </ScalarVariable>
     <ScalarVariable name="OSMPSensorDataIn.size" valueReference="2" causality="input" variability="discrete">
       <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataIn" role="size" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
     </ScalarVariable>
     <ScalarVariable name="OSMPSensorDataOut.base.lo" valueReference="3" causality="output" variability="discrete" initial="exact">
       <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.lo" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
     </ScalarVariable>
     <ScalarVariable name="OSMPSensorDataOut.base.hi" valueReference="4" causality="output" variability="discrete" initial="exact">
       <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.hi" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
     </ScalarVariable>
     <ScalarVariable name="OSMPSensorDataOut.size" valueReference="5" causality="output" variability="discrete" initial="exact">
       <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="size" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
     </ScalarVariable>
   </ModelVariables>
   <ModelStructure>
