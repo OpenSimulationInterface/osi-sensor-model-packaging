@@ -89,7 +89,7 @@ bool COSMPDummySensor::get_fmi_sensor_data_in(osi::SensorData& data)
 {
     if (integer_vars[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX] > 0) {
         void* buffer = decode_integer_to_pointer(integer_vars[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX]);
-        private_log("Got %08X %08X, reading from %p ...",integer_vars[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX],buffer);
+        normal_log("OSMP","Got %08X %08X, reading from %p ...",integer_vars[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX],buffer);
         data.ParseFromArray(buffer,integer_vars[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX]);
         return true;
     } else {
@@ -102,7 +102,7 @@ void COSMPDummySensor::set_fmi_sensor_data_out(const osi::SensorData& data)
     data.SerializeToString(&currentBuffer);
     encode_pointer_to_integer(currentBuffer.data(),integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX]);
     integer_vars[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX]=(fmi2Integer)currentBuffer.length();
-    private_log("Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX],currentBuffer.data());
+    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX],currentBuffer.data());
     swap(currentBuffer,lastBuffer);
 }
 
@@ -226,7 +226,10 @@ COSMPDummySensor::COSMPDummySensor(fmi2String theinstanceName, fmi2Type thefmuTy
     loggingOn(!!theloggingOn),
     last_time(0.0)
 {
-
+    loggingCategories.clear();
+    loggingCategories.insert("FMI");
+    loggingCategories.insert("OSMP");
+    loggingCategories.insert("OSI");
 }
 
 COSMPDummySensor::~COSMPDummySensor()
@@ -235,10 +238,26 @@ COSMPDummySensor::~COSMPDummySensor()
 }
 
 
-fmi2Status COSMPDummySensor::SetDebugLogging(fmi2Boolean theloggingOn,size_t nCategories, const fmi2String categories[])
+fmi2Status COSMPDummySensor::SetDebugLogging(fmi2Boolean theloggingOn, size_t nCategories, const fmi2String categories[])
 {
-    private_log("fmi2SetDebugLogging(%s)", theloggingOn ? "true" : "false");
+    fmi_verbose_log("fmi2SetDebugLogging(%s)", theloggingOn ? "true" : "false");
     loggingOn = theloggingOn ? true : false;
+    if (categories && (nCategories > 0)) {
+        loggingCategories.clear();
+        for (size_t i=0;i<nCategories;i++) {
+            if (categories[i] == "FMI")
+                loggingCategories.insert("FMI");
+            else if (categories[i] == "OSMP")
+                loggingCategories.insert("OSMP");
+            else if (categories[i] == "OSI")
+                loggingCategories.insert("OSI");
+        }
+    } else {
+        loggingCategories.clear();
+        loggingCategories.insert("FMI");
+        loggingCategories.insert("OSMP");
+        loggingCategories.insert("OSI");
+    }
     return fmi2OK;
 }
 
@@ -247,7 +266,7 @@ fmi2Component COSMPDummySensor::Instantiate(fmi2String instanceName, fmi2Type fm
     COSMPDummySensor* myc = new COSMPDummySensor(instanceName,fmuType,fmuGUID,fmuResourceLocation,functions,visible,loggingOn);
 
     if (myc == NULL) {
-        private_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = NULL (alloc failure)",
+        fmi_verbose_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = NULL (alloc failure)",
             instanceName, fmuType, fmuGUID,
             (fmuResourceLocation != NULL) ? fmuResourceLocation : "<NULL>",
             "FUNCTIONS", visible, loggingOn);
@@ -255,7 +274,7 @@ fmi2Component COSMPDummySensor::Instantiate(fmi2String instanceName, fmi2Type fm
     }
 
     if (myc->doInit() != fmi2OK) {
-        private_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = NULL (doInit failure)",
+        fmi_verbose_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = NULL (doInit failure)",
             instanceName, fmuType, fmuGUID,
             (fmuResourceLocation != NULL) ? fmuResourceLocation : "<NULL>",
             "FUNCTIONS", visible, loggingOn);
@@ -263,7 +282,7 @@ fmi2Component COSMPDummySensor::Instantiate(fmi2String instanceName, fmi2Type fm
         return NULL;
     }
     else {
-        private_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = %p",
+        fmi_verbose_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = %p",
             instanceName, fmuType, fmuGUID,
             (fmuResourceLocation != NULL) ? fmuResourceLocation : "<NULL>",
             "FUNCTIONS", visible, loggingOn, myc);
@@ -273,37 +292,37 @@ fmi2Component COSMPDummySensor::Instantiate(fmi2String instanceName, fmi2Type fm
 
 fmi2Status COSMPDummySensor::SetupExperiment(fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime)
 {
-    private_log("fmi2SetupExperiment(%d,%g,%g,%d,%g)", toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime);
+    fmi_verbose_log("fmi2SetupExperiment(%d,%g,%g,%d,%g)", toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime);
     return doStart(toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime);
 }
 
 fmi2Status COSMPDummySensor::EnterInitializationMode()
 {
-    private_log("fmi2EnterInitializationMode()");
+    fmi_verbose_log("fmi2EnterInitializationMode()");
     return doEnterInitializationMode();
 }
 
 fmi2Status COSMPDummySensor::ExitInitializationMode()
 {
-    private_log("fmi2ExitInitializationMode()");
+    fmi_verbose_log("fmi2ExitInitializationMode()");
     return doExitInitializationMode();
 }
 
 fmi2Status COSMPDummySensor::DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
 {
-    private_log("fmi2DoStep(%g,%g,%d)", currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPointfmi2Component);
+    fmi_verbose_log("fmi2DoStep(%g,%g,%d)", currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPointfmi2Component);
     return doCalc(currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPointfmi2Component);
 }
 
 fmi2Status COSMPDummySensor::Terminate()
 {
-    private_log("fmi2Terminate()");
+    fmi_verbose_log("fmi2Terminate()");
     return doTerm();
 }
 
 fmi2Status COSMPDummySensor::Reset()
 {
-    private_log("fmi2Reset()");
+    fmi_verbose_log("fmi2Reset()");
 
     doFree();
     return doInit();
@@ -311,13 +330,13 @@ fmi2Status COSMPDummySensor::Reset()
 
 void COSMPDummySensor::FreeInstance()
 {
-    private_log("fmi2FreeInstance()");
+    fmi_verbose_log("fmi2FreeInstance()");
     doFree();
 }
 
 fmi2Status COSMPDummySensor::GetReal(const fmi2ValueReference vr[], size_t nvr, fmi2Real value[])
 {
-    private_log("fmi2GetReal(...)");
+    fmi_verbose_log("fmi2GetReal(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_REAL_VARS)
             value[i] = real_vars[vr[i]];
@@ -329,7 +348,7 @@ fmi2Status COSMPDummySensor::GetReal(const fmi2ValueReference vr[], size_t nvr, 
 
 fmi2Status COSMPDummySensor::GetInteger(const fmi2ValueReference vr[], size_t nvr, fmi2Integer value[])
 {
-    private_log("fmi2GetInteger(...)");
+    fmi_verbose_log("fmi2GetInteger(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_INTEGER_VARS)
             value[i] = integer_vars[vr[i]];
@@ -341,7 +360,7 @@ fmi2Status COSMPDummySensor::GetInteger(const fmi2ValueReference vr[], size_t nv
 
 fmi2Status COSMPDummySensor::GetBoolean(const fmi2ValueReference vr[], size_t nvr, fmi2Boolean value[])
 {
-    private_log("fmi2GetBoolean(...)");
+    fmi_verbose_log("fmi2GetBoolean(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_BOOLEAN_VARS)
             value[i] = boolean_vars[vr[i]];
@@ -353,7 +372,7 @@ fmi2Status COSMPDummySensor::GetBoolean(const fmi2ValueReference vr[], size_t nv
 
 fmi2Status COSMPDummySensor::GetString(const fmi2ValueReference vr[], size_t nvr, fmi2String value[])
 {
-    private_log("fmi2GetString(...)");
+    fmi_verbose_log("fmi2GetString(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_STRING_VARS)
             value[i] = string_vars[vr[i]].c_str();
@@ -365,7 +384,7 @@ fmi2Status COSMPDummySensor::GetString(const fmi2ValueReference vr[], size_t nvr
 
 fmi2Status COSMPDummySensor::SetReal(const fmi2ValueReference vr[], size_t nvr, const fmi2Real value[])
 {
-    private_log("fmi2SetReal(...)");
+    fmi_verbose_log("fmi2SetReal(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_REAL_VARS)
             real_vars[vr[i]] = value[i];
@@ -377,7 +396,7 @@ fmi2Status COSMPDummySensor::SetReal(const fmi2ValueReference vr[], size_t nvr, 
 
 fmi2Status COSMPDummySensor::SetInteger(const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[])
 {
-    private_log("fmi2SetInteger(...)");
+    fmi_verbose_log("fmi2SetInteger(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_INTEGER_VARS)
             integer_vars[vr[i]] = value[i];
@@ -389,7 +408,7 @@ fmi2Status COSMPDummySensor::SetInteger(const fmi2ValueReference vr[], size_t nv
 
 fmi2Status COSMPDummySensor::SetBoolean(const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[])
 {
-    private_log("fmi2SetBoolean(...)");
+    fmi_verbose_log("fmi2SetBoolean(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_BOOLEAN_VARS)
             boolean_vars[vr[i]] = value[i];
@@ -401,7 +420,7 @@ fmi2Status COSMPDummySensor::SetBoolean(const fmi2ValueReference vr[], size_t nv
 
 fmi2Status COSMPDummySensor::SetString(const fmi2ValueReference vr[], size_t nvr, const fmi2String value[])
 {
-    private_log("fmi2SetString(...)");
+    fmi_verbose_log("fmi2SetString(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_STRING_VARS)
             string_vars[vr[i]] = value[i];
