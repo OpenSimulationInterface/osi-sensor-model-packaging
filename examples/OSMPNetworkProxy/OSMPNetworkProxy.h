@@ -1,0 +1,214 @@
+/*
+ * PMSF FMU Framework for FMI 2.0 Co-Simulation FMUs
+ *
+ * (C) 2016 -- 2017 PMSF IT Consulting Pierre R. Mai
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+using namespace std;
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <unistd.h>
+typedef int SOCKET;
+#endif
+#ifndef INVALID_SOCKET
+#define INVALID_SOCKET -1
+#endif
+
+#ifdef WITH_ZMQ
+#include "zmq.hpp"
+#endif
+
+#include "fmi2Functions.h"
+
+/* Enable Logging to File for Debug Builds */
+#ifndef NDEBUG
+#ifdef _WIN32
+#define PRIVATE_LOG_PATH "C:\\TEMP\\OSMPNetworkProxyLog.log"
+#else
+#define PRIVATE_LOG_PATH "/tmp/OSMPNetworkProxyLog.log"
+#endif
+#endif
+
+/*
+ * Variable Definitions
+ *
+ * Define FMI_*_LAST_IDX to the zero-based index of the last variable
+ * of the given type (0 if no variables of the type exist).  This
+ * ensures proper space allocation, initialisation and handling of
+ * the given variables in the template code.  Optionally you can
+ * define FMI_TYPENAME_VARNAME_IDX definitions (e.g. FMI_REAL_MYVAR_IDX)
+ * to refer to individual variables inside your code, or for example
+ * FMI_REAL_MYARRAY_OFFSET and FMI_REAL_MYARRAY_SIZE definitions for
+ * array variables.
+ */
+
+/* Boolean Variables */
+#define FMI_BOOLEAN_DUMMY_IDX 0
+#define FMI_BOOLEAN_ZMQ_IDX 1
+#define FMI_BOOLEAN_PUBSUB_IDX 2
+#define FMI_BOOLEAN_DATALOG_IDX 3
+#define FMI_BOOLEAN_VALID_IDX 4
+#define FMI_BOOLEAN_SENT_IDX 5
+#define FMI_BOOLEAN_LAST_IDX FMI_BOOLEAN_SENT_IDX
+#define FMI_BOOLEAN_VARS (FMI_BOOLEAN_LAST_IDX+1)
+
+/* Integer Variables */
+#define FMI_INTEGER_SENSORDATA_IN_BASELO_IDX 0
+#define FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX 1
+#define FMI_INTEGER_SENSORDATA_IN_SIZE_IDX 2
+#define FMI_INTEGER_LAST_IDX FMI_INTEGER_SENSORDATA_IN_SIZE_IDX
+#define FMI_INTEGER_VARS (FMI_INTEGER_LAST_IDX+1)
+
+/* Real Variables */
+#define FMI_REAL_LAST_IDX 0
+#define FMI_REAL_VARS (FMI_REAL_LAST_IDX+1)
+
+/* String Variables */
+#define FMI_STRING_ADDRESS_IDX 0
+#define FMI_STRING_PORT_IDX 1
+#define FMI_STRING_LAST_IDX FMI_STRING_PORT_IDX
+#define FMI_STRING_VARS (FMI_STRING_LAST_IDX+1)
+
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <cstdarg>
+
+/* FMU Class */
+class COSMPNetworkProxy {
+public:
+    /* FMI2 Interface mapped to C++ */
+    COSMPNetworkProxy(fmi2String theinstanceName, fmi2Type thefmuType, fmi2String thefmuGUID, fmi2String thefmuResourceLocation, const fmi2CallbackFunctions* thefunctions, fmi2Boolean thevisible, fmi2Boolean theloggingOn);
+    ~COSMPNetworkProxy();
+    fmi2Status SetDebugLogging(fmi2Boolean theloggingOn,size_t nCategories, const fmi2String categories[]);
+    static fmi2Component Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID, fmi2String fmuResourceLocation, const fmi2CallbackFunctions* functions, fmi2Boolean visible, fmi2Boolean loggingOn);
+    fmi2Status SetupExperiment(fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime);
+    fmi2Status EnterInitializationMode();
+    fmi2Status ExitInitializationMode();
+    fmi2Status DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component);
+    fmi2Status Terminate();
+    fmi2Status Reset();
+    void FreeInstance();
+    fmi2Status GetReal(const fmi2ValueReference vr[], size_t nvr, fmi2Real value[]);
+    fmi2Status GetInteger(const fmi2ValueReference vr[], size_t nvr, fmi2Integer value[]);
+    fmi2Status GetBoolean(const fmi2ValueReference vr[], size_t nvr, fmi2Boolean value[]);
+    fmi2Status GetString(const fmi2ValueReference vr[], size_t nvr, fmi2String value[]);
+    fmi2Status SetReal(const fmi2ValueReference vr[], size_t nvr, const fmi2Real value[]);
+    fmi2Status SetInteger(const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[]);
+    fmi2Status SetBoolean(const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[]);
+    fmi2Status SetString(const fmi2ValueReference vr[], size_t nvr, const fmi2String value[]);
+
+protected:
+    /* Internal Implementation */
+    fmi2Status doInit();
+    fmi2Status doStart(fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime);
+    fmi2Status doEnterInitializationMode();
+    fmi2Status doExitInitializationMode();
+    fmi2Status doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component);
+    fmi2Status doTerm();
+    void doFree();
+
+protected:
+    /* Private File-based Logging just for Debugging */
+#ifdef PRIVATE_LOG_PATH
+    static ofstream private_log_file;
+#endif
+
+    static void private_log_global(const char* format, ...) {
+#ifdef PRIVATE_LOG_PATH
+        va_list ap;
+        va_start(ap, format);
+        char buffer[1024];
+        if (!private_log_file.is_open())
+            private_log_file.open(PRIVATE_LOG_PATH, ios::out | ios::app);
+        if (private_log_file.is_open()) {
+#ifdef _WIN32
+            vsnprintf_s(buffer, 1024, format, ap);
+#else
+            vsnprintf(buffer, 1024, format, ap);
+#endif
+            private_log_file << "OSMPNetworkProxy" << "::Global: " << buffer << endl;
+            private_log_file.flush();
+        }
+#endif
+    }
+    void private_log(const char* format, ...) {
+#ifdef PRIVATE_LOG_PATH
+        va_list ap;
+        va_start(ap, format);
+        char buffer[1024];
+        if (!private_log_file.is_open())
+            private_log_file.open(PRIVATE_LOG_PATH, ios::out | ios::app);
+        if (private_log_file.is_open()) {
+#ifdef _WIN32
+            vsnprintf_s(buffer, 1024, format, ap);
+#else
+            vsnprintf(buffer, 1024, format, ap);
+#endif
+            private_log_file << "OSMPNetworkProxy" << "::" << instanceName << "<" << ((void*)this) << ">: " << buffer << endl;
+            private_log_file.flush();
+        }
+#endif
+    }
+
+protected:
+    /* Members */
+    string instanceName;
+    fmi2Type fmuType;
+    string fmuGUID;
+    string fmuResourceLocation;
+    bool visible;
+    bool loggingOn;
+    fmi2CallbackFunctions functions;
+    fmi2Boolean boolean_vars[FMI_BOOLEAN_VARS];
+    fmi2Integer integer_vars[FMI_INTEGER_VARS];
+    fmi2Real real_vars[FMI_REAL_VARS];
+    string string_vars[FMI_STRING_VARS];
+    double last_time;
+
+	/* Proxy Connections */
+    SOCKET tcp_proxy_socket;
+#ifdef WITH_ZMQ
+    zmq::context_t zmq_proxy_context;
+    zmq::socket_t *zmq_proxy_socket;
+#endif
+
+    int ensure_tcp_proxy_connection();
+	void close_tcp_proxy_connection();
+#ifdef WITH_ZMQ
+    int ensure_zmq_proxy_connection();
+	void close_zmq_proxy_connection();
+#endif
+
+    /* Simple FMU Field Accessors */
+    fmi2Boolean fmi_dummy() { return boolean_vars[FMI_BOOLEAN_DUMMY_IDX]; }
+    void set_fmi_dummy(fmi2Boolean value) { boolean_vars[FMI_BOOLEAN_DUMMY_IDX]=value; }
+#ifdef WITH_ZMQ
+    fmi2Boolean fmi_zmq() { return boolean_vars[FMI_BOOLEAN_ZMQ_IDX]; }
+    void set_fmi_zmq(fmi2Boolean value) { boolean_vars[FMI_BOOLEAN_ZMQ_IDX]=value; }
+    fmi2Boolean fmi_pubsub() { return boolean_vars[FMI_BOOLEAN_PUBSUB_IDX]; }
+    void set_fmi_pubsub(fmi2Boolean value) { boolean_vars[FMI_BOOLEAN_PUBSUB_IDX]=value; }
+#endif
+    fmi2Boolean fmi_datalog() { return boolean_vars[FMI_BOOLEAN_DATALOG_IDX]; }
+    void set_fmi_datalog(fmi2Boolean value) { boolean_vars[FMI_BOOLEAN_DATALOG_IDX]=value; }
+    fmi2Boolean fmi_valid() { return boolean_vars[FMI_BOOLEAN_VALID_IDX]; }
+    void set_fmi_valid(fmi2Boolean value) { boolean_vars[FMI_BOOLEAN_VALID_IDX]=value; }
+    fmi2Boolean fmi_sent() { return boolean_vars[FMI_BOOLEAN_SENT_IDX]; }
+    void set_fmi_sent(fmi2Boolean value) { boolean_vars[FMI_BOOLEAN_SENT_IDX]=value; }
+    string fmi_port() { return string_vars[FMI_STRING_PORT_IDX]; }
+    void set_fmi_port(string value) { string_vars[FMI_STRING_PORT_IDX]=value; }
+    string fmi_address() { return string_vars[FMI_STRING_ADDRESS_IDX]; }
+    void set_fmi_address(string value) { string_vars[FMI_STRING_ADDRESS_IDX]=value; }
+
+};
