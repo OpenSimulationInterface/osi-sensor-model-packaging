@@ -113,13 +113,13 @@ int COSMPNetworkProxy::ensure_tcp_proxy_connection()
 	hints.ai_addr=0;
 	hints.ai_next=0;
 
-	private_log("Connecting to %s:%s",fmi_address().c_str(),fmi_port().c_str());
+	normal_log("NET","Connecting to %s:%s",fmi_address().c_str(),fmi_port().c_str());
 	rc=getaddrinfo(fmi_address().c_str(),fmi_port().c_str(),&hints,&result);
 	if (rc!=0 || !result) {
 #ifdef _WIN32
-		private_log("Error getting destination address: %d",WSAGetLastError());
+		normal_log("NET","Error getting destination address: %d",WSAGetLastError());
 #else
-		private_log("Error getting destination address: %d (%s)",rc,gai_strerror(rc));
+		normal_log("NET","Error getting destination address: %d (%s)",rc,gai_strerror(rc));
 #endif
 		return 0;
 	}
@@ -127,9 +127,9 @@ int COSMPNetworkProxy::ensure_tcp_proxy_connection()
 	tcp_proxy_socket = socket(result->ai_family,SOCK_STREAM,IPPROTO_TCP);
 	if (tcp_proxy_socket == INVALID_SOCKET) {
 #ifdef _WIN32
-		private_log("Error setting up Socket: %d",WSAGetLastError());
+		normal_log("NET","Error setting up Socket: %d",WSAGetLastError());
 #else
-		private_log("Error setting up Socket: %d (%s)",errno,strerror(errno));
+		normal_log("NET","Error setting up Socket: %d (%s)",errno,strerror(errno));
 #endif
 		freeaddrinfo(result);
 		return 0;
@@ -139,9 +139,9 @@ int COSMPNetworkProxy::ensure_tcp_proxy_connection()
 
 	if (rc != 0) {
 #ifdef _WIN32
-		private_log("Error setting up Socket Connection: %d",WSAGetLastError());
+		normal_log("NET","Error setting up Socket Connection: %d",WSAGetLastError());
 #else
-		private_log("Error setting up Socket Connection: %d (%s)",errno,strerror(errno));
+		normal_log("NET","Error setting up Socket Connection: %d (%s)",errno,strerror(errno));
 #endif
 #ifdef _WIN32
 		closesocket(tcp_proxy_socket);
@@ -186,16 +186,16 @@ int COSMPNetworkProxy::ensure_zmq_proxy_connection()
 			addrstream << "tcp://*:" << fmi_port();
 			string addr = addrstream.str();
 			zmq_proxy_socket->bind(addr);
-			private_log("Successfully bound to %s",addr.c_str());
+			normal_log("NET","Successfully bound to %s",addr.c_str());
 		} else {
 			std::stringstream addrstream;
 			addrstream << "tcp://" << fmi_address() << ":" << fmi_port();
 			string addr = addrstream.str();
 			zmq_proxy_socket->connect(addr);
-			private_log("Successfully connected to %s",addr.c_str());
+			normal_log("NET","Successfully connected to %s",addr.c_str());
 		}
 	} catch(const zmq::error_t& e) {
-		private_log("Failed to set up 0MQ connection: %s",e.what());
+		normal_log("NET","Failed to set up 0MQ connection: %s",e.what());
 		delete zmq_proxy_socket;
 		zmq_proxy_socket=nullptr;
 		return 0;
@@ -276,7 +276,7 @@ fmi2Status COSMPNetworkProxy::doCalc(fmi2Real currentCommunicationPoint, fmi2Rea
 	if (integer_vars[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX] > 0) {
 		void* buffer = decode_integer_to_pointer(integer_vars[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX]);
 		int buffersize = integer_vars[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX];
-        private_log("Got %08X %08X LEN %08X, reading from %p (length %i)...",integer_vars[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX],buffersize,buffer,buffersize);
+        normal_log("OSMP","Got %08X %08X LEN %08X, reading from %p (length %i)...",integer_vars[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX],buffersize,buffer,buffersize);
 		if (fmi_datalog()) {
 			for (int i=0;i<buffersize;i+=16) {
 				std::stringstream hexline;
@@ -284,7 +284,7 @@ fmi2Status COSMPNetworkProxy::doCalc(fmi2Real currentCommunicationPoint, fmi2Rea
 				for (int j=0;((i+j)<buffersize) && (j<16);j++) {
 				    hexline << " " << (int)((unsigned char*)buffer)[i+j];
 				}
-				private_log("       %s",hexline.str().c_str());
+				normal_log("OSMP","       %s",hexline.str().c_str());
 			}
 		}
         set_fmi_valid(true);
@@ -295,13 +295,13 @@ fmi2Status COSMPNetworkProxy::doCalc(fmi2Real currentCommunicationPoint, fmi2Rea
 				if (ensure_zmq_proxy_connection()) {
 					try {
 						if (!zmq_proxy_socket->send(buffer,buffersize)) {
-							private_log("Failed to send message with size %d.",buffersize);
+							normal_log("NET","Failed to send message with size %d.",buffersize);
 						} else {
-							private_log("Successfully sent zmq message with size %d.",buffersize);
+							normal_log("NET","Successfully sent zmq message with size %d.",buffersize);
 							set_fmi_sent(true);
 						}
 					} catch(const zmq::error_t& e) {
-						private_log("Failed to send message with size %d: %s",buffersize,e.what());
+						normal_log("NET","Failed to send message with size %d: %s",buffersize,e.what());
 					}
 				}
 			} else {
@@ -310,22 +310,22 @@ fmi2Status COSMPNetworkProxy::doCalc(fmi2Real currentCommunicationPoint, fmi2Rea
 					int sendval=send(tcp_proxy_socket,(char*)&buffersize,sizeof(buffersize),0);
 					if (sendval!=sizeof(buffersize)) {
 #ifdef _WIN32
-						private_log("Failed to send message size (%d): %d",buffersize,WSAGetLastError());
+						normal_log("NET","Failed to send message size (%d): %d",buffersize,WSAGetLastError());
 #else
-						private_log("Failed to send message size (%d): %d (%s)",buffersize,errno,strerror(errno));
+						normal_log("NET","Failed to send message size (%d): %d (%s)",buffersize,errno,strerror(errno));
 #endif
 						close_tcp_proxy_connection();
 					} else {
 						sendval=send(tcp_proxy_socket,(char*)buffer,buffersize,0);
 						if (sendval!=buffersize) {
 #ifdef _WIN32
-							private_log("Failed to send message itself with size %d: %d",buffersize,WSAGetLastError());
+							normal_log("NET","Failed to send message itself with size %d: %d",buffersize,WSAGetLastError());
 #else
-							private_log("Failed to send message itself with size %d: %d (%s)",buffersize,errno,strerror(errno));
+							normal_log("NET","Failed to send message itself with size %d: %d (%s)",buffersize,errno,strerror(errno));
 #endif
 							close_tcp_proxy_connection();
 						} else {
-							private_log("Successfully sent tcp message with size %d.",buffersize);
+							normal_log("NET","Successfully sent tcp message with size %d.",buffersize);
 							set_fmi_sent(true);
 						}
 					}
@@ -336,7 +336,7 @@ fmi2Status COSMPNetworkProxy::doCalc(fmi2Real currentCommunicationPoint, fmi2Rea
 		}
     }
 
-	last_time=currentCommunicationPoint+communicationStepSize;
+    last_time=currentCommunicationPoint+communicationStepSize;
     return fmi2OK;
 }
 
@@ -364,38 +364,57 @@ COSMPNetworkProxy::COSMPNetworkProxy(fmi2String theinstanceName, fmi2Type thefmu
     visible(!!thevisible),
     loggingOn(!!theloggingOn),
     last_time(0.0),
-	tcp_proxy_socket(INVALID_SOCKET)
+    tcp_proxy_socket(INVALID_SOCKET)
 #ifdef WITH_ZMQ
-	,zmq_proxy_context(),
-	zmq_proxy_socket(nullptr)
+    ,zmq_proxy_context(),
+    zmq_proxy_socket(nullptr)
 #endif
 {
+    loggingCategories.clear();
+    loggingCategories.insert("FMI");
+    loggingCategories.insert("OSMP");
+    loggingCategories.insert("NET");
 #ifdef _WIN32
-	long rc;
-	WSADATA WsaDat;
-	if ((rc=WSAStartup(MAKEWORD(2,2),&WsaDat)) != 0) {
-		private_log("Error %d setting up Windows Socket Communications.",rc);
-		WSACleanup();
-	}
+    long rc;
+    WSADATA WsaDat;
+    if ((rc=WSAStartup(MAKEWORD(2,2),&WsaDat)) != 0) {
+        normal_log("NET","Error %d setting up Windows Socket Communications.",rc);
+        WSACleanup();
+    }
 #endif
-
 }
 
 COSMPNetworkProxy::~COSMPNetworkProxy()
 {
 #ifdef WITH_ZMQ
-	close_zmq_proxy_connection();
+    close_zmq_proxy_connection();
 #endif
-	close_tcp_proxy_connection();
+    close_tcp_proxy_connection();
 #ifdef _WIN32
-	WSACleanup();
+    WSACleanup();
 #endif
 }
 
 fmi2Status COSMPNetworkProxy::SetDebugLogging(fmi2Boolean theloggingOn,size_t nCategories, const fmi2String categories[])
 {
-    private_log("fmi2SetDebugLogging(%s)", theloggingOn ? "true" : "false");
+    fmi_verbose_log("fmi2SetDebugLogging(%s)", theloggingOn ? "true" : "false");
     loggingOn = theloggingOn ? true : false;
+    if (categories && (nCategories > 0)) {
+        loggingCategories.clear();
+        for (size_t i=0;i<nCategories;i++) {
+            if (categories[i] == "FMI")
+                loggingCategories.insert("FMI");
+            else if (categories[i] == "OSMP")
+                loggingCategories.insert("OSMP");
+            else if (categories[i] == "NET")
+                loggingCategories.insert("NET");
+        }
+    } else {
+        loggingCategories.clear();
+        loggingCategories.insert("FMI");
+        loggingCategories.insert("OSMP");
+        loggingCategories.insert("NET");
+    }
     return fmi2OK;
 }
 
@@ -406,7 +425,7 @@ fmi2Component COSMPNetworkProxy::Instantiate(fmi2String instanceName, fmi2Type f
 	    myc = new COSMPNetworkProxy(instanceName,fmuType,fmuGUID,fmuResourceLocation,functions,visible,loggingOn);
 
 		if (myc == nullptr) {
-			private_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = NULL (alloc failure)",
+			fmi_verbose_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = NULL (alloc failure)",
 				instanceName, fmuType, fmuGUID,
 				(fmuResourceLocation != NULL) ? fmuResourceLocation : "<NULL>",
 				"FUNCTIONS", visible, loggingOn);
@@ -414,14 +433,14 @@ fmi2Component COSMPNetworkProxy::Instantiate(fmi2String instanceName, fmi2Type f
 		}
 
 		if (myc->doInit() != fmi2OK) {
-			private_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = NULL (doInit failure)",
+			fmi_verbose_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = NULL (doInit failure)",
 				instanceName, fmuType, fmuGUID,
 				(fmuResourceLocation != NULL) ? fmuResourceLocation : "<NULL>",
 				"FUNCTIONS", visible, loggingOn);
 			delete myc;
 			return NULL;
 		} else {
-			private_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = %p",
+			fmi_verbose_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = %p",
 				instanceName, fmuType, fmuGUID,
 				(fmuResourceLocation != NULL) ? fmuResourceLocation : "<NULL>",
 				"FUNCTIONS", visible, loggingOn, myc);
@@ -429,7 +448,7 @@ fmi2Component COSMPNetworkProxy::Instantiate(fmi2String instanceName, fmi2Type f
 		}
 	} catch (std::exception &e) {
 		try {
-			private_log_global("Unhandled exception in fmi2Instantiate: %s",e.what());
+			fmi_verbose_log_global("Unhandled exception in fmi2Instantiate: %s",e.what());
 			if (myc!=nullptr)
 				delete myc;
 		} catch (...) {
@@ -440,12 +459,12 @@ fmi2Component COSMPNetworkProxy::Instantiate(fmi2String instanceName, fmi2Type f
 
 fmi2Status COSMPNetworkProxy::SetupExperiment(fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime)
 {
-    private_log("fmi2SetupExperiment(%d,%g,%g,%d,%g)", toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime);
+    fmi_verbose_log("fmi2SetupExperiment(%d,%g,%g,%d,%g)", toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime);
 	try {
 	    return doStart(toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime);
 	} catch (std::exception &e) {
 		try {
-			private_log("Unhandled exception in fmi2SetupExperiment: %s",e.what());
+			fmi_verbose_log("Unhandled exception in fmi2SetupExperiment: %s",e.what());
 		} catch (...) {
 		}
 		return fmi2Error;
@@ -454,12 +473,12 @@ fmi2Status COSMPNetworkProxy::SetupExperiment(fmi2Boolean toleranceDefined, fmi2
 
 fmi2Status COSMPNetworkProxy::EnterInitializationMode()
 {
-    private_log("fmi2EnterInitializationMode()");
+    fmi_verbose_log("fmi2EnterInitializationMode()");
 	try {
 	    return doEnterInitializationMode();
 	} catch (std::exception &e) {
 		try {
-			private_log("Unhandled exception in fmi2EnterInitializationMode: %s",e.what());
+			fmi_verbose_log("Unhandled exception in fmi2EnterInitializationMode: %s",e.what());
 		} catch (...) {
 		}
 		return fmi2Error;
@@ -468,12 +487,12 @@ fmi2Status COSMPNetworkProxy::EnterInitializationMode()
 
 fmi2Status COSMPNetworkProxy::ExitInitializationMode()
 {
-    private_log("fmi2ExitInitializationMode()");
+    fmi_verbose_log("fmi2ExitInitializationMode()");
 	try {
 	    return doExitInitializationMode();
 	} catch (std::exception &e) {
 		try {
-			private_log("Unhandled exception in fmi2ExitInitializationMode: %s",e.what());
+			fmi_verbose_log("Unhandled exception in fmi2ExitInitializationMode: %s",e.what());
 		} catch (...) {
 		}
 		return fmi2Error;
@@ -482,12 +501,12 @@ fmi2Status COSMPNetworkProxy::ExitInitializationMode()
 
 fmi2Status COSMPNetworkProxy::DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
 {
-    private_log("fmi2DoStep(%g,%g,%d)", currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPointfmi2Component);
+    fmi_verbose_log("fmi2DoStep(%g,%g,%d)", currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPointfmi2Component);
 	try {
 	    return doCalc(currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPointfmi2Component);
 	} catch (std::exception &e) {
 		try {
-			private_log("Unhandled exception in fmi2DoStep: %s",e.what());
+			fmi_verbose_log("Unhandled exception in fmi2DoStep: %s",e.what());
 		} catch (...) {
 		}
 		return fmi2Error;
@@ -496,12 +515,12 @@ fmi2Status COSMPNetworkProxy::DoStep(fmi2Real currentCommunicationPoint, fmi2Rea
 
 fmi2Status COSMPNetworkProxy::Terminate()
 {
-    private_log("fmi2Terminate()");
+    fmi_verbose_log("fmi2Terminate()");
 	try {
 	    return doTerm();
 	} catch (std::exception &e) {
 		try {
-			private_log("Unhandled exception in fmi2Terminate: %s",e.what());
+			fmi_verbose_log("Unhandled exception in fmi2Terminate: %s",e.what());
 		} catch (...) {
 		}
 		return fmi2Error;
@@ -510,13 +529,13 @@ fmi2Status COSMPNetworkProxy::Terminate()
 
 fmi2Status COSMPNetworkProxy::Reset()
 {
-    private_log("fmi2Reset()");
+    fmi_verbose_log("fmi2Reset()");
 	try {
 	    doFree();
 		return doInit();
 	} catch (std::exception &e) {
 		try {
-			private_log("Unhandled exception in fmi2Reset: %s",e.what());
+			fmi_verbose_log("Unhandled exception in fmi2Reset: %s",e.what());
 		} catch (...) {
 		}
 		return fmi2Error;
@@ -525,12 +544,12 @@ fmi2Status COSMPNetworkProxy::Reset()
 
 void COSMPNetworkProxy::FreeInstance()
 {
-    private_log("fmi2FreeInstance()");
+    fmi_verbose_log("fmi2FreeInstance()");
 	try {
 	    doFree();
 	} catch (std::exception &e) {
 		try {
-			private_log("Unhandled exception in fmi2FreeInstance: %s",e.what());
+			fmi_verbose_log("Unhandled exception in fmi2FreeInstance: %s",e.what());
 		} catch (...) {
 		}
 	}
@@ -538,7 +557,7 @@ void COSMPNetworkProxy::FreeInstance()
 
 fmi2Status COSMPNetworkProxy::GetReal(const fmi2ValueReference vr[], size_t nvr, fmi2Real value[])
 {
-    private_log("fmi2GetReal(...)");
+    fmi_verbose_log("fmi2GetReal(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_REAL_VARS)
             value[i] = real_vars[vr[i]];
@@ -550,7 +569,7 @@ fmi2Status COSMPNetworkProxy::GetReal(const fmi2ValueReference vr[], size_t nvr,
 
 fmi2Status COSMPNetworkProxy::GetInteger(const fmi2ValueReference vr[], size_t nvr, fmi2Integer value[])
 {
-    private_log("fmi2GetInteger(...)");
+    fmi_verbose_log("fmi2GetInteger(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_INTEGER_VARS)
             value[i] = integer_vars[vr[i]];
@@ -562,7 +581,7 @@ fmi2Status COSMPNetworkProxy::GetInteger(const fmi2ValueReference vr[], size_t n
 
 fmi2Status COSMPNetworkProxy::GetBoolean(const fmi2ValueReference vr[], size_t nvr, fmi2Boolean value[])
 {
-    private_log("fmi2GetBoolean(...)");
+    fmi_verbose_log("fmi2GetBoolean(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_BOOLEAN_VARS)
             value[i] = boolean_vars[vr[i]];
@@ -574,7 +593,7 @@ fmi2Status COSMPNetworkProxy::GetBoolean(const fmi2ValueReference vr[], size_t n
 
 fmi2Status COSMPNetworkProxy::GetString(const fmi2ValueReference vr[], size_t nvr, fmi2String value[])
 {
-    private_log("fmi2GetString(...)");
+    fmi_verbose_log("fmi2GetString(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_STRING_VARS)
             value[i] = string_vars[vr[i]].c_str();
@@ -586,7 +605,7 @@ fmi2Status COSMPNetworkProxy::GetString(const fmi2ValueReference vr[], size_t nv
 
 fmi2Status COSMPNetworkProxy::SetReal(const fmi2ValueReference vr[], size_t nvr, const fmi2Real value[])
 {
-    private_log("fmi2SetReal(...)");
+    fmi_verbose_log("fmi2SetReal(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_REAL_VARS)
             real_vars[vr[i]] = value[i];
@@ -598,7 +617,7 @@ fmi2Status COSMPNetworkProxy::SetReal(const fmi2ValueReference vr[], size_t nvr,
 
 fmi2Status COSMPNetworkProxy::SetInteger(const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[])
 {
-    private_log("fmi2SetInteger(...)");
+    fmi_verbose_log("fmi2SetInteger(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_INTEGER_VARS)
             integer_vars[vr[i]] = value[i];
@@ -610,7 +629,7 @@ fmi2Status COSMPNetworkProxy::SetInteger(const fmi2ValueReference vr[], size_t n
 
 fmi2Status COSMPNetworkProxy::SetBoolean(const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[])
 {
-    private_log("fmi2SetBoolean(...)");
+    fmi_verbose_log("fmi2SetBoolean(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_BOOLEAN_VARS)
             boolean_vars[vr[i]] = value[i];
@@ -622,7 +641,7 @@ fmi2Status COSMPNetworkProxy::SetBoolean(const fmi2ValueReference vr[], size_t n
 
 fmi2Status COSMPNetworkProxy::SetString(const fmi2ValueReference vr[], size_t nvr, const fmi2String value[])
 {
-    private_log("fmi2SetString(...)");
+    fmi_verbose_log("fmi2SetString(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_STRING_VARS)
             string_vars[vr[i]] = value[i];
