@@ -179,11 +179,11 @@ protected:
     /* Members */
     string instanceName;
     string fmuGUID;
-	string mimeType;
+    string mimeType;
     string fmuLocation;
-	double timeout;
+    double timeout;
     bool visible;
-	bool interactive;
+    bool interactive;
     bool loggingOn;
     fmiCallbackFunctions functions;
     fmiBoolean boolean_vars[FMI_BOOLEAN_VARS];

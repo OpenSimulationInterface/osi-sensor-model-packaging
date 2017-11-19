@@ -242,9 +242,9 @@ fmiStatus COSMPDummySensor10::doCalc(fmiReal currentCommunicationPoint, fmiReal 
         for_each(currentIn.ground_truth().global_ground_truth().vehicle().begin(),currentIn.ground_truth().global_ground_truth().vehicle().end(),
             [this,&i,&currentOut,ego_id,ego_x,ego_y,ego_z](const osi::Vehicle& veh) {
                 if (veh.id().value() != ego_id.value()) {
-					// NOTE: We currently do not take sensor mounting position into account,
-					// i.e. sensor-relative coordinates are relative to center of bounding box
-					// of ego vehicle currently.
+                    // NOTE: We currently do not take sensor mounting position into account,
+                    // i.e. sensor-relative coordinates are relative to center of bounding box
+                    // of ego vehicle currently.
                     double trans_x = veh.base().position().x()-ego_x;
                     double trans_y = veh.base().position().y()-ego_y;
                     double trans_z = veh.base().position().z()-ego_z;
@@ -305,8 +305,8 @@ COSMPDummySensor10::COSMPDummySensor10(fmiString theinstanceName, fmiString thef
     : instanceName(theinstanceName),
     fmuGUID(thefmuGUID),
     fmuLocation(thefmuLocation),
-	mimeType(themimeType),
-	timeout(thetimeout),
+    mimeType(themimeType),
+    timeout(thetimeout),
     visible(!!thevisible),
     interactive(!!theinteractive),
     functions(thefunctions),
@@ -337,8 +337,8 @@ fmiComponent COSMPDummySensor10::Instantiate(fmiString instanceName, fmiString f
             (instanceName != NULL) ? instanceName : "<NULL>",
             (fmuGUID != NULL) ? fmuGUID : "<NULL>",
             (fmuLocation != NULL) ? fmuLocation : "<NULL>",
-			(mimeType != NULL) ? mimeType : "<NULL>",
-			timeout, visible, interactive, "FUNCTIONS", loggingOn);
+            (mimeType != NULL) ? mimeType : "<NULL>",
+            timeout, visible, interactive, "FUNCTIONS", loggingOn);
         return NULL;
     }
 
@@ -347,8 +347,8 @@ fmiComponent COSMPDummySensor10::Instantiate(fmiString instanceName, fmiString f
             (instanceName != NULL) ? instanceName : "<NULL>",
             (fmuGUID != NULL) ? fmuGUID : "<NULL>",
             (fmuLocation != NULL) ? fmuLocation : "<NULL>",
-			(mimeType != NULL) ? mimeType : "<NULL>",
-			timeout, visible, interactive, "FUNCTIONS", loggingOn);
+            (mimeType != NULL) ? mimeType : "<NULL>",
+            timeout, visible, interactive, "FUNCTIONS", loggingOn);
         delete myc;
         return NULL;
     }
@@ -357,8 +357,8 @@ fmiComponent COSMPDummySensor10::Instantiate(fmiString instanceName, fmiString f
             (instanceName != NULL) ? instanceName : "<NULL>",
             (fmuGUID != NULL) ? fmuGUID : "<NULL>",
             (fmuLocation != NULL) ? fmuLocation : "<NULL>",
-			(mimeType != NULL) ? mimeType : "<NULL>",
-			timeout, visible, interactive, "FUNCTIONS", loggingOn, myc);
+            (mimeType != NULL) ? mimeType : "<NULL>",
+            timeout, visible, interactive, "FUNCTIONS", loggingOn, myc);
         return (fmiComponent)myc;
     }
 }
@@ -520,9 +520,9 @@ extern "C" {
         fmiString fmuGUID,
         fmiString fmuLocation,
         fmiString mimeType,
-		fmiReal timeout,
+        fmiReal timeout,
         fmiBoolean visible,
-		fmiBoolean interactive,
+        fmiBoolean interactive,
         fmiCallbackFunctions functions,
         fmiBoolean loggingOn)
     {

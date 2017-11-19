@@ -253,9 +253,9 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         for_each(currentIn.ground_truth().global_ground_truth().vehicle().begin(),currentIn.ground_truth().global_ground_truth().vehicle().end(),
             [this,&i,&currentOut,ego_id,ego_x,ego_y,ego_z](const osi::Vehicle& veh) {
                 if (veh.id().value() != ego_id.value()) {
-					// NOTE: We currently do not take sensor mounting position into account,
-					// i.e. sensor-relative coordinates are relative to center of bounding box
-					// of ego vehicle currently.
+                    // NOTE: We currently do not take sensor mounting position into account,
+                    // i.e. sensor-relative coordinates are relative to center of bounding box
+                    // of ego vehicle currently.
                     double trans_x = veh.base().position().x()-ego_x;
                     double trans_y = veh.base().position().y()-ego_y;
                     double trans_z = veh.base().position().z()-ego_z;

@@ -218,10 +218,10 @@ protected:
 #endif
 
     int ensure_tcp_proxy_connection();
-	void close_tcp_proxy_connection();
+    void close_tcp_proxy_connection();
 #ifdef WITH_ZMQ
     int ensure_zmq_proxy_connection();
-	void close_zmq_proxy_connection();
+    void close_zmq_proxy_connection();
 #endif
 
     /* Simple FMU Field Accessors */
