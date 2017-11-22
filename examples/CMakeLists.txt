@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/Modules/")
 
 # Set a default build type if none was specified
 set(default_build_type "Release")
@@ -19,3 +20,4 @@ add_subdirectory( open-simulation-interface )
 include_directories( includes )
 add_subdirectory( OSMPDummySensor )
 add_subdirectory( OSMPDummySensor10 )
+add_subdirectory( OSMPNetworkProxy )
