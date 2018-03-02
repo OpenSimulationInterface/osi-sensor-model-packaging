@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fmiModelDescription
+  fmiVersion="2.0"
+  modelName="OSMPCNetworkProxy"
+  guid="@FMUGUID@"
+  description="OSMP Network Proxy FMU"
+  author="PMSF"
+  version="1.1"
+  generationTool="PMSF Manual FMU Framework"
+  generationDateAndTime="@FMUTIMESTAMP@"
+  variableNamingConvention="structured">
+  <CoSimulation
+    modelIdentifier="OSMPCNetworkProxy"
+    canHandleVariableCommunicationStepSize="true"
+    canNotUseMemoryManagementFunctions="true">
+    <SourceFiles>
+      <File name="OSMPCNetworkProxy.c"/>
+    </SourceFiles>
+  </CoSimulation>
+  <DefaultExperiment startTime="0.0" stepSize="0.020"/>
+  <VendorAnnotations>
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.3.0" osi-version="2.2.0"/></Tool>
+  </VendorAnnotations>
+  <ModelVariables>
+    <ScalarVariable name="OSMPSensorDataIn.base.lo" valueReference="0" causality="input" variability="discrete">
+      <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataIn" role="base.lo"/></Tool>
+      </Annotations>
+    </ScalarVariable>
+    <ScalarVariable name="OSMPSensorDataIn.base.hi" valueReference="1" causality="input" variability="discrete">
+      <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataIn" role="base.hi"/></Tool>
+      </Annotations>
+    </ScalarVariable>
+    <ScalarVariable name="OSMPSensorDataIn.size" valueReference="2" causality="input" variability="discrete">
+      <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataIn" role="size"/></Tool>
+      </Annotations>
+    </ScalarVariable>
+    <ScalarVariable name="OSMPSensorDataOut.base.lo" valueReference="3" causality="output" variability="discrete" initial="exact">
+      <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.lo" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
+    </ScalarVariable>
+    <ScalarVariable name="OSMPSensorDataOut.base.hi" valueReference="4" causality="output" variability="discrete" initial="exact">
+      <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.hi" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
+    </ScalarVariable>
+    <ScalarVariable name="OSMPSensorDataOut.size" valueReference="5" causality="output" variability="discrete" initial="exact">
+      <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="size" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+      </Annotations>
+    </ScalarVariable>
+    <ScalarVariable name="dummy" valueReference="0" causality="parameter" variability="fixed">
+      <Boolean start="false"/>
+    </ScalarVariable>
+    <ScalarVariable name="sender" valueReference="1" causality="parameter" variability="fixed">
+      <Boolean start="true"/>
+    </ScalarVariable>
+    <ScalarVariable name="receiver" valueReference="2" causality="parameter" variability="fixed">
+      <Boolean start="true"/>
+    </ScalarVariable>
+    <ScalarVariable name="logData" valueReference="5" causality="parameter" variability="fixed">
+      <Boolean start="false"/>
+    </ScalarVariable>
+    <ScalarVariable name="input.valid" valueReference="6" causality="output" variability="discrete" initial="exact">
+      <Boolean start="false"/>
+    </ScalarVariable>
+    <ScalarVariable name="input.sent" valueReference="7" causality="output" variability="discrete" initial="exact">
+      <Boolean start="false"/>
+    </ScalarVariable>
+    <ScalarVariable name="output.received" valueReference="8" causality="output" variability="discrete" initial="exact">
+      <Boolean start="false"/>
+    </ScalarVariable>
+    <ScalarVariable name="output.valid" valueReference="9" causality="output" variability="discrete" initial="exact">
+      <Boolean start="false"/>
+    </ScalarVariable>
+    <ScalarVariable name="address" valueReference="0" causality="parameter" variability="fixed">
+      <String start="127.0.0.1"/>
+    </ScalarVariable>
+    <ScalarVariable name="port" valueReference="1" causality="parameter" variability="fixed">
+      <String start="3456"/>
+    </ScalarVariable>
+  </ModelVariables>
+  <ModelStructure>
+    <Outputs>
+      <Unknown index="4"/>
+      <Unknown index="5"/>
+      <Unknown index="6"/>
+      <Unknown index="11"/>
+      <Unknown index="12"/>
+      <Unknown index="13"/>
+      <Unknown index="14"/>
+    </Outputs>
+  </ModelStructure>
+</fmiModelDescription>
