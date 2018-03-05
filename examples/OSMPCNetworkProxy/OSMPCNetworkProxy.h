@@ -112,7 +112,8 @@ typedef struct OSMPCNetworkProxy {
     char* fmuResourceLocation;
     int visible;
     int loggingOn;
-    //set<string> loggingCategories;
+    size_t nCategories;
+    char** loggingCategories;
     fmi2CallbackFunctionsVar functions;
     fmi2Boolean boolean_vars[FMI_BOOLEAN_VARS];
     fmi2Integer integer_vars[FMI_INTEGER_VARS];

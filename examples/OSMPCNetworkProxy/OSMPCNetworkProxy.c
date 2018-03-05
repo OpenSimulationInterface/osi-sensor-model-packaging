@@ -226,16 +226,21 @@ fmi2Status doCalc(OSMPCNetworkProxy component, fmi2Real currentCommunicationPoin
     if (component->integer_vars[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX] > 0) {
         normal_log(component,"OSMP","Got %08X %08X LEN %08X, reading from %p (length %i)...",component->integer_vars[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],component->integer_vars[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX],buffersize,buffer,buffersize);
         if (component->boolean_vars[FMI_BOOLEAN_LOG_DATA_IDX]) {
-#if 0
-            for (int i=0;i<buffersize;i+=16) {
-                std::stringstream hexline;
-                hexline << std::hex << std::setfill('0') << std::setw(2);
-                for (int j=0;((i+j)<buffersize) && (j<16);j++) {
-                    hexline << " " << (int)((unsigned char*)buffer)[i+j];
+            int i=0;
+            for (i=0;i<buffersize;i+=16) {
+                static char hexmap[]="0123456789ABCDEF";
+                char hexline[50];
+                char *ptr;
+                int j=0;
+                for (j=0,ptr=hexline;((i+j)<buffersize) && (j<16);j++) {
+                    unsigned char byte = ((unsigned char*)buffer)[i+j];
+                    *ptr++=' ';
+                    *ptr++=hexmap[byte>>4];
+                    *ptr++=hexmap[byte&0xF];
                 }
-                normal_log(component,"OSMP","       %s",hexline.str().c_str());
+                *ptr='\0';
+                normal_log(component,"OSMP","       %s",hexline);
             }
-#endif
         }
         component->boolean_vars[FMI_BOOLEAN_INPUT_VALID_IDX]=fmi2True;
     }
@@ -380,24 +385,29 @@ FMI2_Export fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingO
     OSMPCNetworkProxy myc = (OSMPCNetworkProxy)c;
     fmi_verbose_log(myc,"fmi2SetDebugLogging(%s)", loggingOn ? "true" : "false");
     myc->loggingOn = loggingOn ? 1 : 0;
-#if 0
+    
+    for (;myc->loggingCategories!=NULL && myc->nCategories>0;) free(myc->loggingCategories[--(myc->nCategories)]);
+    free(myc->loggingCategories);
+    myc->loggingCategories = NULL;
+    myc->nCategories = 0;
+
     if (categories && (nCategories > 0)) {
-        loggingCategories.clear();
-        for (size_t i=0;i<nCategories;i++) {
-            if (categories[i] == "FMI")
-                loggingCategories.insert("FMI");
-            else if (categories[i] == "OSMP")
-                loggingCategories.insert("OSMP");
-            else if (categories[i] == "NET")
-                loggingCategories.insert("NET");
+        myc->loggingCategories = calloc(nCategories,sizeof(char*));
+        if (myc->loggingCategories != NULL) {
+            size_t i;
+            myc->nCategories = nCategories;
+            for (i=0;i<nCategories;i++) myc->loggingCategories[i]=strdup(categories[i]);
         }
     } else {
-        loggingCategories.clear();
-        loggingCategories.insert("FMI");
-        loggingCategories.insert("OSMP");
-        loggingCategories.insert("NET");
+        myc->loggingCategories = calloc(3,sizeof(char*));
+        if (myc->loggingCategories != NULL) {
+            myc->nCategories = 3;
+            myc->loggingCategories[0] = strdup("FMI");
+            myc->loggingCategories[1] = strdup("OSMP");
+            myc->loggingCategories[2] = strdup("NET");
+        }
     }
-#endif
+    
     return fmi2OK;
 }
 
@@ -454,12 +464,14 @@ FMI2_Export fmi2Component fmi2Instantiate(fmi2String instanceName,
     myc->prev_output_buffer_ptr=NULL;
     myc->prev_output_buffer_size=0;
 
-#if 0
-    loggingCategories.clear();
-    loggingCategories.insert("FMI");
-    loggingCategories.insert("OSMP");
-    loggingCategories.insert("NET");
-#endif
+    myc->loggingCategories = calloc(3,sizeof(char*));
+    if (myc->loggingCategories != NULL) {
+        myc->nCategories = 3;
+        myc->loggingCategories[0] = strdup("FMI");
+        myc->loggingCategories[1] = strdup("OSMP");
+        myc->loggingCategories[2] = strdup("NET");
+    }
+    
 #ifdef _WIN32
     if ((rc=WSAStartup(MAKEWORD(2,2),&WsaDat)) != 0) {
         normal_log(myc,"NET","Error %d setting up Windows Socket Communications.",rc);
@@ -475,6 +487,8 @@ FMI2_Export fmi2Component fmi2Instantiate(fmi2String instanceName,
         free(myc->fmuResourceLocation);
         free(myc->fmuGUID);
         free(myc->instanceName);
+        for (;myc->loggingCategories!=NULL && myc->nCategories>0;) free(myc->loggingCategories[--(myc->nCategories)]);
+        free(myc->loggingCategories);
         free(myc);
         return NULL;
     }
@@ -550,6 +564,8 @@ FMI2_Export void fmi2FreeInstance(fmi2Component c)
     free(myc->fmuResourceLocation);
     free(myc->fmuGUID);
     free(myc->instanceName);
+    for (;myc->loggingCategories!=NULL && myc->nCategories>0;) free(myc->loggingCategories[--(myc->nCategories)]);
+    free(myc->loggingCategories);
     free(myc);
 }
 
