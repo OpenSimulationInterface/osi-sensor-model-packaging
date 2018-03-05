@@ -428,6 +428,7 @@ FMI2_Export fmi2Component fmi2Instantiate(fmi2String instanceName,
 #endif
     OSMPCNetworkProxy myc = NULL;
     
+#ifdef FMU_GUID
     if (fmuGUID!=NULL && 0!=strcmp(fmuGUID,FMU_GUID)) {
         fmi_verbose_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = NULL (GUID mismatch, expected %s)",
             instanceName, fmuType, fmuGUID,
@@ -435,6 +436,7 @@ FMI2_Export fmi2Component fmi2Instantiate(fmi2String instanceName,
             "FUNCTIONS", visible, loggingOn, FMU_GUID);
         return NULL;
     }
+#endif
     
     myc = calloc(1,sizeof(struct OSMPCNetworkProxy));
     
