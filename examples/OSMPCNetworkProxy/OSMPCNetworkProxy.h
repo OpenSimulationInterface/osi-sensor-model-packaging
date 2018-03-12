@@ -32,6 +32,9 @@ typedef int SOCKET;
 #define INVALID_SOCKET -1
 #endif
 
+#ifndef FMU_SHARED_OBJECT
+#define FMI2_FUNCTION_PREFIX OSMPCNetworkProxy_
+#endif
 #include "fmi2Functions.h"
 
 /* 

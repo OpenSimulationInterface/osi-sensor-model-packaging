@@ -18,6 +18,7 @@ configure_file(modelDescription.in.xml modelDescription.xml @ONLY)
 
 add_library(OSMPCNetworkProxy SHARED OSMPCNetworkProxy.c)
 set_target_properties(OSMPCNetworkProxy PROPERTIES PREFIX "")
+target_compile_definitions(OSMPCNetworkProxy PRIVATE "FMU_SHARED_OBJECT")
 target_compile_definitions(OSMPCNetworkProxy PRIVATE "FMU_GUID=\"${FMUGUID}\"")
 target_compile_definitions(OSMPCNetworkProxy PRIVATE "FMU_DEFAULT_ADDRESS=\"${FMU_DEFAULT_ADDRESS}\"")
 target_compile_definitions(OSMPCNetworkProxy PRIVATE "FMU_DEFAULT_PORT=\"${FMU_DEFAULT_PORT}\"")
