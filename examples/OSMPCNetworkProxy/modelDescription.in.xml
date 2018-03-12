@@ -5,7 +5,7 @@
   guid="@FMUGUID@"
   description="OSMP Network Proxy FMU"
   author="PMSF"
-  version="1.1"
+  version="1.2"
   generationTool="PMSF Manual FMU Framework"
   generationDateAndTime="@FMUTIMESTAMP@"
   variableNamingConvention="structured">
@@ -83,10 +83,10 @@
       <Boolean start="false"/>
     </ScalarVariable>
     <ScalarVariable name="address" valueReference="0" causality="parameter" variability="fixed">
-      <String start="127.0.0.1"/>
+      <String start="@FMU_DEFAULT_ADDRESS@"/>
     </ScalarVariable>
     <ScalarVariable name="port" valueReference="1" causality="parameter" variability="fixed">
-      <String start="3456"/>
+      <String start="@FMU_DEFAULT_PORT@"/>
     </ScalarVariable>
   </ModelVariables>
   <ModelStructure>

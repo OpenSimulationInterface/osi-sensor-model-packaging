@@ -187,8 +187,8 @@ fmi2Status doInit(OSMPCNetworkProxy component)
         component->real_vars[i] = 0.0;
 
     /* Strings */
-    component->string_vars[FMI_STRING_ADDRESS_IDX]=strdup("127.0.0.1");
-    component->string_vars[FMI_STRING_PORT_IDX]=strdup("3456");
+    component->string_vars[FMI_STRING_ADDRESS_IDX]=strdup(FMU_DEFAULT_ADDRESS);
+    component->string_vars[FMI_STRING_PORT_IDX]=strdup(FMU_DEFAULT_PORT);
 
     return fmi2OK;
 }
