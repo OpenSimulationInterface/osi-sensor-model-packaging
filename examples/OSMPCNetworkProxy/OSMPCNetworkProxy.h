@@ -13,7 +13,7 @@
 #include <string.h>
 #include <errno.h>
 
-#ifdef PRIVATE_LOG_PATH
+#if defined(PRIVATE_LOG_PATH) || defined(PUBLIC_LOGGING)
 #include <stdio.h>
 #endif
 
@@ -174,8 +174,18 @@ void internal_log(OSMPCNetworkProxy component,const char* category, const char* 
     }
 #endif
 #ifdef PUBLIC_LOGGING
-    if (loggingOn && loggingCategories.count(category))
-        functions.logger(functions.componentEnvironment,instanceName.c_str(),fmi2OK,category,buffer);
+    if (component->loggingOn) {
+        size_t i;
+        int active = component->nCategories == 0;
+        for (i=0;i<component->nCategories;i++) {
+            if (0==strcmp(category,component->loggingCategories[i])) {
+                active = 1;
+                break;
+            }
+        }
+        if (active) 
+            component->functions.logger(component->functions.componentEnvironment,component->instanceName,fmi2OK,category,buffer);
+    }
 #endif
 #endif
 }
