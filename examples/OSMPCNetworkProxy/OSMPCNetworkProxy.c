@@ -86,6 +86,136 @@ void encode_pointer_to_integer(const void* ptr,fmi2Integer* hi,fmi2Integer* lo)
  * TCP Proxy Communication
  */
 
+#ifdef FMU_LISTEN
+int ensure_tcp_proxy_listen(OSMPCNetworkProxy component)
+{
+    struct addrinfo hints;
+    struct addrinfo *result;
+    int rc;
+    
+    if (component->tcp_proxy_listen_socket != INVALID_SOCKET)
+        return 1;
+    
+    memset(&hints,0,sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    hints.ai_flags = AI_NUMERICHOST|AI_PASSIVE;
+    hints.ai_addrlen=0;
+    hints.ai_canonname=0;
+    hints.ai_addr=0;
+    hints.ai_next=0;
+
+    normal_log(component,"NET","Listening on %s:%s",component->string_vars[FMI_STRING_ADDRESS_IDX],component->string_vars[FMI_STRING_PORT_IDX]);
+    rc=getaddrinfo(component->string_vars[FMI_STRING_ADDRESS_IDX],component->string_vars[FMI_STRING_PORT_IDX],&hints,&result);
+    if (rc!=0 || !result) {
+#ifdef _WIN32
+        normal_log(component,"NET","Error getting listening address: %d",WSAGetLastError());
+#else
+        normal_log(component,"NET","Error getting listening address: %d (%s)",rc,gai_strerror(rc));
+#endif
+        return 0;
+    }
+
+    component->tcp_proxy_listen_socket = socket(result->ai_family,SOCK_STREAM,IPPROTO_TCP);
+    if (component->tcp_proxy_listen_socket == INVALID_SOCKET) {
+#ifdef _WIN32
+        normal_log(component,"NET","Error setting up Socket: %d",WSAGetLastError());
+#else
+        normal_log(component,"NET","Error setting up Socket: %d (%s)",errno,strerror(errno));
+#endif
+        freeaddrinfo(result);
+        return 0;
+    }
+
+    rc = bind(component->tcp_proxy_listen_socket,result->ai_addr,result->ai_addrlen);
+
+    if (rc != 0) {
+#ifdef _WIN32
+        normal_log(component,"NET","Error setting up Socket Bind: %d",WSAGetLastError());
+#else
+        normal_log(component,"NET","Error setting up Socket Bind: %d (%s)",errno,strerror(errno));
+#endif
+#ifdef _WIN32
+        closesocket(component->tcp_proxy_listen_socket);
+#else
+        close(component->tcp_proxy_listen_socket);
+#endif
+        component->tcp_proxy_listen_socket=INVALID_SOCKET;
+        freeaddrinfo(result);
+        return 0;
+    }
+
+    freeaddrinfo(result);
+    return 1;
+}
+
+int ensure_tcp_proxy_connection(OSMPCNetworkProxy component)
+{
+    int rc;
+    
+    if (component->tcp_proxy_socket != INVALID_SOCKET)
+        return 1;
+        
+    if (!ensure_tcp_proxy_listen(component))
+        return 0;
+
+    normal_log(component,"NET","Listening on %s:%s",component->string_vars[FMI_STRING_ADDRESS_IDX],component->string_vars[FMI_STRING_PORT_IDX]);
+    rc=listen(component->tcp_proxy_listen_socket,SOMAXCONN);
+    if (rc!=0) {
+#ifdef _WIN32
+        normal_log(component,"NET","Error listening on socket: %d",WSAGetLastError());
+        closesocket(component->tcp_proxy_listen_socket);
+#else
+        normal_log(component,"NET","Error listening on socket: %d (%s)",rc,gai_strerror(rc));
+        close(component->tcp_proxy_listen_socket);
+#endif
+        component->tcp_proxy_listen_socket=INVALID_SOCKET;
+        return 0;
+    }
+
+    component->tcp_proxy_socket = accept(component->tcp_proxy_listen_socket,NULL,NULL);
+    if (component->tcp_proxy_socket == INVALID_SOCKET) {
+#ifdef _WIN32
+        normal_log(component,"NET","Error accepting on Socket: %d",WSAGetLastError());
+        closesocket(component->tcp_proxy_listen_socket);
+#else
+        normal_log(component,"NET","Error accpeting on Socket: %d (%s)",errno,strerror(errno));
+        close(component->tcp_proxy_listen_socket);
+#endif
+        component->tcp_proxy_listen_socket=INVALID_SOCKET;
+        return 0;
+    }
+
+    return 1;
+}
+
+void close_tcp_proxy_connection(OSMPCNetworkProxy component)
+{
+    if (component->tcp_proxy_socket!=INVALID_SOCKET) {
+#ifdef _WIN32
+        closesocket(component->tcp_proxy_socket);
+#else
+        close(component->tcp_proxy_socket);
+#endif
+        component->tcp_proxy_socket=INVALID_SOCKET;
+    }
+}
+
+void close_tcp_proxy_listen(OSMPCNetworkProxy component)
+{
+    if (component->tcp_proxy_listen_socket!=INVALID_SOCKET) {
+#ifdef _WIN32
+        closesocket(component->tcp_proxy_listen_socket);
+#else
+        close(component->tcp_proxy_listen_socket);
+#endif
+        component->tcp_proxy_listen_socket=INVALID_SOCKET;
+    }
+}
+
+#else
+
 int ensure_tcp_proxy_connection(OSMPCNetworkProxy component)
 {
     struct addrinfo hints;
@@ -161,6 +291,7 @@ void close_tcp_proxy_connection(OSMPCNetworkProxy component)
     }
 }
 
+#endif
 /*
  * Actual Core Content
  */
@@ -197,7 +328,12 @@ fmi2Status doStart(OSMPCNetworkProxy component,fmi2Boolean toleranceDefined, fmi
 {
     DEBUGBREAK();
     component->last_time = startTime;
-    return fmi2OK;
+#ifdef FMU_LISTEN
+    if (!ensure_tcp_proxy_listen(component))
+        return fmi2Error;
+    else
+#endif
+        return fmi2OK;
 }
 
 fmi2Status doEnterInitializationMode(OSMPCNetworkProxy component)
@@ -348,6 +484,10 @@ fmi2Status doCalc(OSMPCNetworkProxy component, fmi2Real currentCommunicationPoin
 fmi2Status doTerm(OSMPCNetworkProxy component)
 {
     DEBUGBREAK();
+#ifdef FMU_LISTEN
+    close_tcp_proxy_listen(component);
+#endif
+    close_tcp_proxy_connection(component);
     return fmi2OK;
 }
 
@@ -460,6 +600,9 @@ FMI2_Export fmi2Component fmi2Instantiate(fmi2String instanceName,
     myc->visible=visible;
     myc->loggingOn=loggingOn;
     myc->last_time=0.0;
+#ifdef FMU_LISTEN
+    myc->tcp_proxy_listen_socket=INVALID_SOCKET;
+#endif
     myc->tcp_proxy_socket=INVALID_SOCKET;
     myc->output_buffer_ptr=NULL;
     myc->output_buffer_size=0;
@@ -558,6 +701,9 @@ FMI2_Export void fmi2FreeInstance(fmi2Component c)
     fmi_verbose_log(myc,"fmi2FreeInstance()");
     doFree(myc);
 
+#ifdef FMU_LISTEN
+    close_tcp_proxy_listen(myc);
+#endif
     close_tcp_proxy_connection(myc);
 #ifdef _WIN32
     WSACleanup();
