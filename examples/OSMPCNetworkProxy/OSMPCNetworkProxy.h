@@ -125,6 +125,9 @@ typedef struct OSMPCNetworkProxy {
     double last_time;
 
     /* Proxy Connections */
+    #ifdef FMU_LISTEN
+    SOCKET tcp_proxy_listen_socket;
+    #endif
     SOCKET tcp_proxy_socket;
 
     /* Buffering */

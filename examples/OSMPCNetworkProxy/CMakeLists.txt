@@ -11,6 +11,7 @@ endif()
 set(VERBOSE_FMI_LOGGING OFF CACHE BOOL "Enable detailed FMI function logging")
 set(FMU_DEFAULT_ADDRESS "127.0.0.1" CACHE STRING "Default address for connections")
 set(FMU_DEFAULT_PORT "3456" CACHE STRING "Default port for connections")
+set(FMU_LISTEN OFF CACHE BOOL "Create FMU that passively listens (server mode)")
 
 string(TIMESTAMP FMUTIMESTAMP UTC)
 string(MD5 FMUGUID modelDescription.in.xml)
@@ -29,6 +30,7 @@ if(PRIVATE_LOGGING)
 		"PRIVATE_LOG_PATH=\"${PRIVATE_LOG_PATH_CPROXY_ESCAPED}\"")
 endif()
 target_compile_definitions(OSMPCNetworkProxy PRIVATE
+    $<$<BOOL:${FMU_LISTEN}>:FMU_LISTEN>
 	$<$<BOOL:${PUBLIC_LOGGING}>:PUBLIC_LOGGING>
 	$<$<BOOL:${VERBOSE_FMI_LOGGING}>:VERBOSE_FMI_LOGGING>)
 if(WIN32)
