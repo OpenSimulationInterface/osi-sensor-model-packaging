@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 project(OSMPCNetworkProxy)
-include(CMakeDependentOption)
+
 set(PUBLIC_LOGGING OFF CACHE BOOL "Enable logging via FMI logger")
 set(PRIVATE_LOGGING OFF CACHE BOOL "Enable private logging to file")
 if(WIN32)
@@ -9,6 +9,7 @@ else()
 	set(PRIVATE_LOG_PATH_CPROXY "/tmp/OSMPCNetworkProxyLog.log" CACHE FILEPATH "Path to write private log file to")
 endif()
 set(VERBOSE_FMI_LOGGING OFF CACHE BOOL "Enable detailed FMI function logging")
+set(DEBUG_BREAKS OFF CACHE BOOL "Enable debugger traps for debug builds of FMU")
 set(FMU_DEFAULT_ADDRESS "127.0.0.1" CACHE STRING "Default address for connections")
 set(FMU_DEFAULT_PORT "3456" CACHE STRING "Default port for connections")
 set(FMU_LISTEN OFF CACHE BOOL "Create FMU that passively listens (server mode)")
@@ -32,10 +33,12 @@ endif()
 target_compile_definitions(OSMPCNetworkProxy PRIVATE
     $<$<BOOL:${FMU_LISTEN}>:FMU_LISTEN>
 	$<$<BOOL:${PUBLIC_LOGGING}>:PUBLIC_LOGGING>
-	$<$<BOOL:${VERBOSE_FMI_LOGGING}>:VERBOSE_FMI_LOGGING>)
+	$<$<BOOL:${VERBOSE_FMI_LOGGING}>:VERBOSE_FMI_LOGGING>
+	$<$<BOOL:${DEBUG_BREAKS}>:DEBUG_BREAKS>)
 if(WIN32)
 	target_link_libraries(OSMPCNetworkProxy wsock32 ws2_32)
 endif()
+
 if(WIN32)
 	if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
 		set(FMI_BINARIES_PLATFORM "win64")
@@ -55,6 +58,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 		set(FMI_BINARIES_PLATFORM "darwin32")
 	endif()
 endif()
+
 add_custom_command(TARGET OSMPCNetworkProxy
 	POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
