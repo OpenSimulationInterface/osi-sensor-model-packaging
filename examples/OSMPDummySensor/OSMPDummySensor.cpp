@@ -1,7 +1,7 @@
 /*
  * PMSF FMU Framework for FMI 2.0 Co-Simulation FMUs
  *
- * (C) 2016 -- 2017 PMSF IT Consulting Pierre R. Mai
+ * (C) 2016 -- 2018 PMSF IT Consulting Pierre R. Mai
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -13,17 +13,31 @@
 /*
  * Debug Breaks
  *
- * If you define DEBUGBREAKS the DLL will automatically break
+ * If you define DEBUG_BREAKS the FMU will automatically break
  * into an attached Debugger on all major computation functions.
- * Note that the DLL is likely to break all environments if no
+ * Note that the FMU is likely to break all environments if no
  * Debugger is actually attached when the breaks are triggered.
  */
-#ifndef NDEBUG
-#ifdef DEBUGBREAKS
+#if defined(DEBUG_BREAKS) && !defined(NDEBUG)
+#if defined(__has_builtin) && !defined(__ibmxl__)
+#if __has_builtin(__builtin_debugtrap)
+#define DEBUGBREAK() __builtin_debugtrap()
+#elif __has_builtin(__debugbreak)
+#define DEBUGBREAK() __debugbreak()
+#endif
+#endif
+#if !defined(DEBUGBREAK)
+#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
 #include <intrin.h>
 #define DEBUGBREAK() __debugbreak()
 #else
-#define DEBUGBREAK()
+#include <signal.h>
+#if defined(SIGTRAP)
+#define DEBUGBREAK() raise(SIGTRAP)
+#else
+#define DEBUGBREAK() raise(SIGABRT)
+#endif
+#endif
 #endif
 #else
 #define DEBUGBREAK()
@@ -183,49 +197,7 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     osi::SensorData currentIn,currentOut;
     double time = currentCommunicationPoint+communicationStepSize;
     normal_log("OSI","Calculating Sensor at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
-    if (fmi_source()) {
-        /* We act as GroundTruth Source, so ignore inputs */
-        static double y_offsets[10] = { 3.0, 3.0, 3.0, 0.5, 0, -0.5, -3.0, -3.0, -3.0, -3.0 };
-        static double x_offsets[10] = { 0.0, 40.0, 100.0, 100.0, 0.0, 150.0, 5.0, 45.0, 85.0, 125.0 };
-        static double x_speeds[10] = { 29.0, 30.0, 31.0, 25.0, 26.0, 28.0, 20.0, 22.0, 22.5, 23.0 };
-        currentOut.Clear();
-        currentOut.mutable_ego_vehicle_id()->set_value(4);
-        osi::SensorDataGroundTruth *currentSDGT = currentOut.mutable_ground_truth();
-        osi::GroundTruth *currentGT = currentSDGT->mutable_global_ground_truth();
-        currentOut.mutable_timestamp()->set_seconds((long long int)floor(time));
-        currentOut.mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
-        currentGT->mutable_timestamp()->set_seconds((long long int)floor(time));
-        currentGT->mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
-        for (unsigned int i=0;i<10;i++) {
-            osi::Vehicle *veh = currentGT->add_vehicle();
-            veh->set_type(osi::Vehicle_Type_TYPE_CAR);
-            veh->mutable_id()->set_value(i);
-            veh->set_ego_vehicle(i==4);
-            veh->mutable_light_state()->set_brake_light_state(osi::Vehicle_LightState_BrakeLightState_BRAKE_LIGHT_STATE_OFF);
-            veh->mutable_base()->mutable_dimension()->set_height(1.5);
-            veh->mutable_base()->mutable_dimension()->set_width(2.0);
-            veh->mutable_base()->mutable_dimension()->set_length(5.0);
-            veh->mutable_base()->mutable_position()->set_x(x_offsets[i]+time*x_speeds[i]);
-            veh->mutable_base()->mutable_position()->set_y(y_offsets[i]+sin(time/x_speeds[i])*0.25);
-            veh->mutable_base()->mutable_position()->set_z(0.0);
-            veh->mutable_base()->mutable_velocity()->set_x(x_speeds[i]);
-            veh->mutable_base()->mutable_velocity()->set_y(cos(time/x_speeds[i])*0.25/x_speeds[i]);
-            veh->mutable_base()->mutable_velocity()->set_z(0.0);
-            veh->mutable_base()->mutable_acceleration()->set_x(0.0);
-            veh->mutable_base()->mutable_acceleration()->set_y(-sin(time/x_speeds[i])*0.25/(x_speeds[i]*x_speeds[i]));
-            veh->mutable_base()->mutable_acceleration()->set_z(0.0);
-            veh->mutable_base()->mutable_orientation()->set_pitch(0.0);
-            veh->mutable_base()->mutable_orientation()->set_roll(0.0);
-            veh->mutable_base()->mutable_orientation()->set_yaw(0.0);
-            veh->mutable_base()->mutable_orientation_rate()->set_pitch(0.0);
-            veh->mutable_base()->mutable_orientation_rate()->set_roll(0.0);
-            veh->mutable_base()->mutable_orientation_rate()->set_yaw(0.0);
-            normal_log("OSI","GT: Adding Vehicle %d[%d] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)",i,veh->id().value(),veh->base().position().x(),veh->base().position().y(),veh->base().position().z(),veh->base().velocity().x(),veh->base().velocity().y(),veh->base().velocity().z());
-        }
-        set_fmi_sensor_data_out(currentOut);
-        set_fmi_valid(true);
-        set_fmi_count(currentOut.object_size());
-    } else if (get_fmi_sensor_data_in(currentIn)) {
+    if (get_fmi_sensor_data_in(currentIn)) {
         double ego_x=0, ego_y=0, ego_z=0;
         osi::Identifier ego_id = currentIn.ego_vehicle_id();
         normal_log("OSI","Looking for EgoVehicle with ID: %d",ego_id.value());
