@@ -8,7 +8,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "OSMPDummySensor.h"
+#include "OSMPDummySource.h"
 
 /*
  * Debug Breaks
@@ -52,7 +52,7 @@
 using namespace std;
 
 #ifdef PRIVATE_LOG_PATH
-ofstream COSMPDummySensor::private_log_file;
+ofstream COSMPDummySource::private_log_file;
 #endif
 
 /*
@@ -100,19 +100,7 @@ void encode_pointer_to_integer(const void* ptr,fmi2Integer& hi,fmi2Integer& lo)
 #endif
 }
 
-bool COSMPDummySensor::get_fmi_sensor_data_in(osi::SensorData& data)
-{
-    if (integer_vars[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX] > 0) {
-        void* buffer = decode_integer_to_pointer(integer_vars[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX]);
-        normal_log("OSMP","Got %08X %08X, reading from %p ...",integer_vars[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX],buffer);
-        data.ParseFromArray(buffer,integer_vars[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX]);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-void COSMPDummySensor::set_fmi_sensor_data_out(const osi::SensorData& data)
+void COSMPDummySource::set_fmi_sensor_data_out(const osi::SensorData& data)
 {
     data.SerializeToString(&currentBuffer);
     encode_pointer_to_integer(currentBuffer.data(),integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX]);
@@ -121,7 +109,7 @@ void COSMPDummySensor::set_fmi_sensor_data_out(const osi::SensorData& data)
     swap(currentBuffer,lastBuffer);
 }
 
-void COSMPDummySensor::reset_fmi_sensor_data_out()
+void COSMPDummySource::reset_fmi_sensor_data_out()
 {
     integer_vars[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX]=0;
     integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX]=0;
@@ -132,7 +120,7 @@ void COSMPDummySensor::reset_fmi_sensor_data_out()
  * Actual Core Content
  */
 
-fmi2Status COSMPDummySensor::doInit()
+fmi2Status COSMPDummySource::doInit()
 {
     DEBUGBREAK();
 
@@ -155,19 +143,19 @@ fmi2Status COSMPDummySensor::doInit()
     return fmi2OK;
 }
 
-fmi2Status COSMPDummySensor::doStart(fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime)
+fmi2Status COSMPDummySource::doStart(fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime)
 {
     DEBUGBREAK();
     last_time = startTime;
     return fmi2OK;
 }
 
-fmi2Status COSMPDummySensor::doEnterInitializationMode()
+fmi2Status COSMPDummySource::doEnterInitializationMode()
 {
     return fmi2OK;
 }
 
-fmi2Status COSMPDummySensor::doExitInitializationMode()
+fmi2Status COSMPDummySource::doExitInitializationMode()
 {
     return fmi2OK;
 }
@@ -191,93 +179,66 @@ void rotatePoint(double x, double y, double z,double yaw,double pitch,double rol
     rz = matrix[2][0] * x + matrix[2][1] * y + matrix[2][2] * z;
 }
 
-fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
+fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
 {
     DEBUGBREAK();
-    osi::SensorData currentIn,currentOut;
+    osi::SensorData currentOut;
     double time = currentCommunicationPoint+communicationStepSize;
-    normal_log("OSI","Calculating Sensor at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
-    if (get_fmi_sensor_data_in(currentIn)) {
-        double ego_x=0, ego_y=0, ego_z=0;
-        osi::Identifier ego_id = currentIn.ego_vehicle_id();
-        normal_log("OSI","Looking for EgoVehicle with ID: %d",ego_id.value());
-        for_each(currentIn.ground_truth().global_ground_truth().vehicle().begin(),currentIn.ground_truth().global_ground_truth().vehicle().end(),
-            [this, ego_id, &ego_x, &ego_y, &ego_z](const osi::Vehicle& veh) {
-                normal_log("OSI","Vehicle with ID %d is EgoVehicle: %d",veh.id().value(), veh.ego_vehicle() ? 1:0);
-                if ((veh.id().value() == ego_id.value()) || (veh.ego_vehicle())) {
-                    normal_log("OSI","Found EgoVehicle with ID: %d",veh.id().value());
-                    ego_x = veh.base().position().x();
-                    ego_y = veh.base().position().y();
-                    ego_z = veh.base().position().z();
-                }
-            });
-        normal_log("OSI","Current Ego Position: %f,%f,%f", ego_x, ego_y, ego_z);
 
-        /* Clear Output */
-        currentOut.Clear();
-        /* Copy Everything */
-        currentOut.MergeFrom(currentIn);
-        /* Adjust Timestamps and Ids */
-        currentOut.mutable_timestamp()->set_seconds((long long int)floor(time));
-        currentOut.mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
-        currentOut.mutable_object()->Clear();
+    normal_log("OSI","Calculating SensorView at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
 
-        int i=0;
-        for_each(currentIn.ground_truth().global_ground_truth().vehicle().begin(),currentIn.ground_truth().global_ground_truth().vehicle().end(),
-            [this,&i,&currentOut,ego_id,ego_x,ego_y,ego_z](const osi::Vehicle& veh) {
-                if (veh.id().value() != ego_id.value()) {
-                    // NOTE: We currently do not take sensor mounting position into account,
-                    // i.e. sensor-relative coordinates are relative to center of bounding box
-                    // of ego vehicle currently.
-                    double trans_x = veh.base().position().x()-ego_x;
-                    double trans_y = veh.base().position().y()-ego_y;
-                    double trans_z = veh.base().position().z()-ego_z;
-                    double rel_x,rel_y,rel_z;
-                    rotatePoint(trans_x,trans_y,trans_z,veh.base().orientation().yaw(),veh.base().orientation().pitch(),veh.base().orientation().roll(),rel_x,rel_y,rel_z);
-                    double distance = sqrt(rel_x*rel_x + rel_y*rel_y + rel_z*rel_z);
-                    if ((distance <= 150.0) && (rel_x/distance > 0.866025)) {
-                        osi::DetectedObject *obj = currentOut.mutable_object()->Add();
-                        obj->mutable_tracking_id()->set_value(i);
-                        obj->mutable_object()->mutable_position()->set_x(veh.base().position().x());
-                        obj->mutable_object()->mutable_position()->set_y(veh.base().position().y());
-                        obj->mutable_object()->mutable_position()->set_z(veh.base().position().z());
-                        obj->mutable_object()->mutable_dimension()->set_length(veh.base().dimension().length());
-                        obj->mutable_object()->mutable_dimension()->set_width(veh.base().dimension().width());
-                        obj->mutable_object()->mutable_dimension()->set_height(veh.base().dimension().height());
-                        obj->set_existence_probability(cos((distance-75.0)/75.0));
-                        normal_log("OSI","Output Vehicle %d[%d] Probability %f Relative Position: %f,%f,%f (%f,%f,%f)",i,veh.id().value(),obj->existence_probability(),rel_x,rel_y,rel_z,obj->object().position().x(),obj->object().position().y(),obj->object().position().z());
-                        i++;
-                    } else {
-                        normal_log("OSI","Ignoring Vehicle %d[%d] Outside Sensor Scope Relative Position: %f,%f,%f (%f,%f,%f)",i,veh.id().value(),veh.base().position().x()-ego_x,veh.base().position().y()-ego_y,veh.base().position().z()-ego_z,veh.base().position().x(),veh.base().position().y(),veh.base().position().z());
-                    }
-                }
-                else
-                {
-                    normal_log("OSI","Ignoring EGO Vehicle %d[%d] Relative Position: %f,%f,%f (%f,%f,%f)",i,veh.id().value(),veh.base().position().x()-ego_x,veh.base().position().y()-ego_y,veh.base().position().z()-ego_z,veh.base().position().x(),veh.base().position().y(),veh.base().position().z());
-                }
-            });
-        normal_log("OSI","Mapped %d vehicles to output", i);
-        /* Serialize */
-        set_fmi_sensor_data_out(currentOut);
-        set_fmi_valid(true);
-        set_fmi_count(currentOut.object_size());
-    } else {
-        /* We have no valid input, so no valid output */
-        normal_log("OSI","No valid input, therefore providing no valid output.");
-        reset_fmi_sensor_data_out();
-        set_fmi_valid(false);
-        set_fmi_count(0);
+    /* We act as GroundTruth Source */
+    static double y_offsets[10] = { 3.0, 3.0, 3.0, 0.5, 0, -0.5, -3.0, -3.0, -3.0, -3.0 };
+    static double x_offsets[10] = { 0.0, 40.0, 100.0, 100.0, 0.0, 150.0, 5.0, 45.0, 85.0, 125.0 };
+    static double x_speeds[10] = { 29.0, 30.0, 31.0, 25.0, 26.0, 28.0, 20.0, 22.0, 22.5, 23.0 };
+
+    currentOut.Clear();
+    currentOut.mutable_ego_vehicle_id()->set_value(4);
+    osi::SensorDataGroundTruth *currentSDGT = currentOut.mutable_ground_truth();
+    osi::GroundTruth *currentGT = currentSDGT->mutable_global_ground_truth();
+    currentOut.mutable_timestamp()->set_seconds((long long int)floor(time));
+    currentOut.mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
+    currentGT->mutable_timestamp()->set_seconds((long long int)floor(time));
+    currentGT->mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
+    for (unsigned int i=0;i<10;i++) {
+        osi::Vehicle *veh = currentGT->add_vehicle();
+        veh->set_type(osi::Vehicle_Type_TYPE_CAR);
+        veh->mutable_id()->set_value(i);
+        veh->set_ego_vehicle(i==4);
+        veh->mutable_light_state()->set_brake_light_state(osi::Vehicle_LightState_BrakeLightState_BRAKE_LIGHT_STATE_OFF);
+        veh->mutable_base()->mutable_dimension()->set_height(1.5);
+        veh->mutable_base()->mutable_dimension()->set_width(2.0);
+        veh->mutable_base()->mutable_dimension()->set_length(5.0);
+        veh->mutable_base()->mutable_position()->set_x(x_offsets[i]+time*x_speeds[i]);
+        veh->mutable_base()->mutable_position()->set_y(y_offsets[i]+sin(time/x_speeds[i])*0.25);
+        veh->mutable_base()->mutable_position()->set_z(0.0);
+        veh->mutable_base()->mutable_velocity()->set_x(x_speeds[i]);
+        veh->mutable_base()->mutable_velocity()->set_y(cos(time/x_speeds[i])*0.25/x_speeds[i]);
+        veh->mutable_base()->mutable_velocity()->set_z(0.0);
+        veh->mutable_base()->mutable_acceleration()->set_x(0.0);
+        veh->mutable_base()->mutable_acceleration()->set_y(-sin(time/x_speeds[i])*0.25/(x_speeds[i]*x_speeds[i]));
+        veh->mutable_base()->mutable_acceleration()->set_z(0.0);
+        veh->mutable_base()->mutable_orientation()->set_pitch(0.0);
+        veh->mutable_base()->mutable_orientation()->set_roll(0.0);
+        veh->mutable_base()->mutable_orientation()->set_yaw(0.0);
+        veh->mutable_base()->mutable_orientation_rate()->set_pitch(0.0);
+        veh->mutable_base()->mutable_orientation_rate()->set_roll(0.0);
+        veh->mutable_base()->mutable_orientation_rate()->set_yaw(0.0);
+        normal_log("OSI","GT: Adding Vehicle %d[%d] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)",i,veh->id().value(),veh->base().position().x(),veh->base().position().y(),veh->base().position().z(),veh->base().velocity().x(),veh->base().velocity().y(),veh->base().velocity().z());
     }
+    set_fmi_sensor_data_out(currentOut);
+    set_fmi_valid(true);
+    set_fmi_count(currentOut.object_size());
     return fmi2OK;
 }
 
-fmi2Status COSMPDummySensor::doTerm()
+fmi2Status COSMPDummySource::doTerm()
 {
     DEBUGBREAK();
     return fmi2OK;
 }
 
-void COSMPDummySensor::doFree()
+void COSMPDummySource::doFree()
 {
     DEBUGBREAK();
 }
@@ -286,7 +247,7 @@ void COSMPDummySensor::doFree()
  * Generic C++ Wrapper Code
  */
 
-COSMPDummySensor::COSMPDummySensor(fmi2String theinstanceName, fmi2Type thefmuType, fmi2String thefmuGUID, fmi2String thefmuResourceLocation, const fmi2CallbackFunctions* thefunctions, fmi2Boolean thevisible, fmi2Boolean theloggingOn)
+COSMPDummySource::COSMPDummySource(fmi2String theinstanceName, fmi2Type thefmuType, fmi2String thefmuGUID, fmi2String thefmuResourceLocation, const fmi2CallbackFunctions* thefunctions, fmi2Boolean thevisible, fmi2Boolean theloggingOn)
     : instanceName(theinstanceName),
     fmuType(thefmuType),
     fmuGUID(thefmuGUID),
@@ -302,13 +263,13 @@ COSMPDummySensor::COSMPDummySensor(fmi2String theinstanceName, fmi2Type thefmuTy
     loggingCategories.insert("OSI");
 }
 
-COSMPDummySensor::~COSMPDummySensor()
+COSMPDummySource::~COSMPDummySource()
 {
 
 }
 
 
-fmi2Status COSMPDummySensor::SetDebugLogging(fmi2Boolean theloggingOn, size_t nCategories, const fmi2String categories[])
+fmi2Status COSMPDummySource::SetDebugLogging(fmi2Boolean theloggingOn, size_t nCategories, const fmi2String categories[])
 {
     fmi_verbose_log("fmi2SetDebugLogging(%s)", theloggingOn ? "true" : "false");
     loggingOn = theloggingOn ? true : false;
@@ -331,9 +292,9 @@ fmi2Status COSMPDummySensor::SetDebugLogging(fmi2Boolean theloggingOn, size_t nC
     return fmi2OK;
 }
 
-fmi2Component COSMPDummySensor::Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID, fmi2String fmuResourceLocation, const fmi2CallbackFunctions* functions, fmi2Boolean visible, fmi2Boolean loggingOn)
+fmi2Component COSMPDummySource::Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID, fmi2String fmuResourceLocation, const fmi2CallbackFunctions* functions, fmi2Boolean visible, fmi2Boolean loggingOn)
 {
-    COSMPDummySensor* myc = new COSMPDummySensor(instanceName,fmuType,fmuGUID,fmuResourceLocation,functions,visible,loggingOn);
+    COSMPDummySource* myc = new COSMPDummySource(instanceName,fmuType,fmuGUID,fmuResourceLocation,functions,visible,loggingOn);
 
     if (myc == NULL) {
         fmi_verbose_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = NULL (alloc failure)",
@@ -360,37 +321,37 @@ fmi2Component COSMPDummySensor::Instantiate(fmi2String instanceName, fmi2Type fm
     }
 }
 
-fmi2Status COSMPDummySensor::SetupExperiment(fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime)
+fmi2Status COSMPDummySource::SetupExperiment(fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime)
 {
     fmi_verbose_log("fmi2SetupExperiment(%d,%g,%g,%d,%g)", toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime);
     return doStart(toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime);
 }
 
-fmi2Status COSMPDummySensor::EnterInitializationMode()
+fmi2Status COSMPDummySource::EnterInitializationMode()
 {
     fmi_verbose_log("fmi2EnterInitializationMode()");
     return doEnterInitializationMode();
 }
 
-fmi2Status COSMPDummySensor::ExitInitializationMode()
+fmi2Status COSMPDummySource::ExitInitializationMode()
 {
     fmi_verbose_log("fmi2ExitInitializationMode()");
     return doExitInitializationMode();
 }
 
-fmi2Status COSMPDummySensor::DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
+fmi2Status COSMPDummySource::DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
 {
     fmi_verbose_log("fmi2DoStep(%g,%g,%d)", currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPointfmi2Component);
     return doCalc(currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPointfmi2Component);
 }
 
-fmi2Status COSMPDummySensor::Terminate()
+fmi2Status COSMPDummySource::Terminate()
 {
     fmi_verbose_log("fmi2Terminate()");
     return doTerm();
 }
 
-fmi2Status COSMPDummySensor::Reset()
+fmi2Status COSMPDummySource::Reset()
 {
     fmi_verbose_log("fmi2Reset()");
 
@@ -398,13 +359,13 @@ fmi2Status COSMPDummySensor::Reset()
     return doInit();
 }
 
-void COSMPDummySensor::FreeInstance()
+void COSMPDummySource::FreeInstance()
 {
     fmi_verbose_log("fmi2FreeInstance()");
     doFree();
 }
 
-fmi2Status COSMPDummySensor::GetReal(const fmi2ValueReference vr[], size_t nvr, fmi2Real value[])
+fmi2Status COSMPDummySource::GetReal(const fmi2ValueReference vr[], size_t nvr, fmi2Real value[])
 {
     fmi_verbose_log("fmi2GetReal(...)");
     for (size_t i = 0; i<nvr; i++) {
@@ -416,7 +377,7 @@ fmi2Status COSMPDummySensor::GetReal(const fmi2ValueReference vr[], size_t nvr, 
     return fmi2OK;
 }
 
-fmi2Status COSMPDummySensor::GetInteger(const fmi2ValueReference vr[], size_t nvr, fmi2Integer value[])
+fmi2Status COSMPDummySource::GetInteger(const fmi2ValueReference vr[], size_t nvr, fmi2Integer value[])
 {
     fmi_verbose_log("fmi2GetInteger(...)");
     for (size_t i = 0; i<nvr; i++) {
@@ -428,7 +389,7 @@ fmi2Status COSMPDummySensor::GetInteger(const fmi2ValueReference vr[], size_t nv
     return fmi2OK;
 }
 
-fmi2Status COSMPDummySensor::GetBoolean(const fmi2ValueReference vr[], size_t nvr, fmi2Boolean value[])
+fmi2Status COSMPDummySource::GetBoolean(const fmi2ValueReference vr[], size_t nvr, fmi2Boolean value[])
 {
     fmi_verbose_log("fmi2GetBoolean(...)");
     for (size_t i = 0; i<nvr; i++) {
@@ -440,7 +401,7 @@ fmi2Status COSMPDummySensor::GetBoolean(const fmi2ValueReference vr[], size_t nv
     return fmi2OK;
 }
 
-fmi2Status COSMPDummySensor::GetString(const fmi2ValueReference vr[], size_t nvr, fmi2String value[])
+fmi2Status COSMPDummySource::GetString(const fmi2ValueReference vr[], size_t nvr, fmi2String value[])
 {
     fmi_verbose_log("fmi2GetString(...)");
     for (size_t i = 0; i<nvr; i++) {
@@ -452,7 +413,7 @@ fmi2Status COSMPDummySensor::GetString(const fmi2ValueReference vr[], size_t nvr
     return fmi2OK;
 }
 
-fmi2Status COSMPDummySensor::SetReal(const fmi2ValueReference vr[], size_t nvr, const fmi2Real value[])
+fmi2Status COSMPDummySource::SetReal(const fmi2ValueReference vr[], size_t nvr, const fmi2Real value[])
 {
     fmi_verbose_log("fmi2SetReal(...)");
     for (size_t i = 0; i<nvr; i++) {
@@ -464,7 +425,7 @@ fmi2Status COSMPDummySensor::SetReal(const fmi2ValueReference vr[], size_t nvr, 
     return fmi2OK;
 }
 
-fmi2Status COSMPDummySensor::SetInteger(const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[])
+fmi2Status COSMPDummySource::SetInteger(const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[])
 {
     fmi_verbose_log("fmi2SetInteger(...)");
     for (size_t i = 0; i<nvr; i++) {
@@ -476,7 +437,7 @@ fmi2Status COSMPDummySensor::SetInteger(const fmi2ValueReference vr[], size_t nv
     return fmi2OK;
 }
 
-fmi2Status COSMPDummySensor::SetBoolean(const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[])
+fmi2Status COSMPDummySource::SetBoolean(const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[])
 {
     fmi_verbose_log("fmi2SetBoolean(...)");
     for (size_t i = 0; i<nvr; i++) {
@@ -488,7 +449,7 @@ fmi2Status COSMPDummySensor::SetBoolean(const fmi2ValueReference vr[], size_t nv
     return fmi2OK;
 }
 
-fmi2Status COSMPDummySensor::SetString(const fmi2ValueReference vr[], size_t nvr, const fmi2String value[])
+fmi2Status COSMPDummySource::SetString(const fmi2ValueReference vr[], size_t nvr, const fmi2String value[])
 {
     fmi_verbose_log("fmi2SetString(...)");
     for (size_t i = 0; i<nvr; i++) {
@@ -518,7 +479,7 @@ extern "C" {
 
     FMI2_Export fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingOn, size_t nCategories, const fmi2String categories[])
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->SetDebugLogging(loggingOn, nCategories, categories);
     }
 
@@ -533,7 +494,7 @@ extern "C" {
         fmi2Boolean visible,
         fmi2Boolean loggingOn)
     {
-        return COSMPDummySensor::Instantiate(instanceName, fmuType, fmuGUID, fmuResourceLocation, functions, visible, loggingOn);
+        return COSMPDummySource::Instantiate(instanceName, fmuType, fmuGUID, fmuResourceLocation, functions, visible, loggingOn);
     }
 
     FMI2_Export fmi2Status fmi2SetupExperiment(fmi2Component c,
@@ -543,19 +504,19 @@ extern "C" {
         fmi2Boolean stopTimeDefined,
         fmi2Real stopTime)
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->SetupExperiment(toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime);
     }
 
     FMI2_Export fmi2Status fmi2EnterInitializationMode(fmi2Component c)
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->EnterInitializationMode();
     }
 
     FMI2_Export fmi2Status fmi2ExitInitializationMode(fmi2Component c)
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->ExitInitializationMode();
     }
 
@@ -564,25 +525,25 @@ extern "C" {
         fmi2Real communicationStepSize,
         fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->DoStep(currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPointfmi2Component);
     }
 
     FMI2_Export fmi2Status fmi2Terminate(fmi2Component c)
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->Terminate();
     }
 
     FMI2_Export fmi2Status fmi2Reset(fmi2Component c)
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->Reset();
     }
 
     FMI2_Export void fmi2FreeInstance(fmi2Component c)
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         myc->FreeInstance();
         delete myc;
     }
@@ -592,49 +553,49 @@ extern "C" {
      */
     FMI2_Export fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Real value[])
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->GetReal(vr, nvr, value);
     }
 
     FMI2_Export fmi2Status fmi2GetInteger(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Integer value[])
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->GetInteger(vr, nvr, value);
     }
 
     FMI2_Export fmi2Status fmi2GetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Boolean value[])
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->GetBoolean(vr, nvr, value);
     }
 
     FMI2_Export fmi2Status fmi2GetString(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2String value[])
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->GetString(vr, nvr, value);
     }
 
     FMI2_Export fmi2Status fmi2SetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Real value[])
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->SetReal(vr, nvr, value);
     }
 
     FMI2_Export fmi2Status fmi2SetInteger(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[])
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->SetInteger(vr, nvr, value);
     }
 
     FMI2_Export fmi2Status fmi2SetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[])
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->SetBoolean(vr, nvr, value);
     }
 
     FMI2_Export fmi2Status fmi2SetString(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2String value[])
     {
-        COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        COSMPDummySource* myc = (COSMPDummySource*)c;
         return myc->SetString(vr, nvr, value);
     }
 

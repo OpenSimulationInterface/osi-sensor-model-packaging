@@ -1,7 +1,7 @@
 /*
  * PMSF FMU Framework for FMI 2.0 Co-Simulation FMUs
  *
- * (C) 2016 -- 2017 PMSF IT Consulting Pierre R. Mai
+ * (C) 2016 -- 2018 PMSF IT Consulting Pierre R. Mai
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -13,24 +13,37 @@
 /*
  * Debug Breaks
  *
- * If you define DEBUGBREAKS the DLL will automatically break
+ * If you define DEBUG_BREAKS the FMU will automatically break
  * into an attached Debugger on all major computation functions.
- * Note that the DLL is likely to break all environments if no
+ * Note that the FMU is likely to break all environments if no
  * Debugger is actually attached when the breaks are triggered.
  */
-#ifndef NDEBUG
-#ifdef DEBUGBREAKS
+#if defined(DEBUG_BREAKS) && !defined(NDEBUG)
+#if defined(__has_builtin) && !defined(__ibmxl__)
+#if __has_builtin(__builtin_debugtrap)
+#define DEBUGBREAK() __builtin_debugtrap()
+#elif __has_builtin(__debugbreak)
+#define DEBUGBREAK() __debugbreak()
+#endif
+#endif
+#if !defined(DEBUGBREAK)
+#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
 #include <intrin.h>
 #define DEBUGBREAK() __debugbreak()
 #else
-#define DEBUGBREAK()
+#include <signal.h>
+#if defined(SIGTRAP)
+#define DEBUGBREAK() raise(SIGTRAP)
+#else
+#define DEBUGBREAK() raise(SIGABRT)
+#endif
+#endif
 #endif
 #else
 #define DEBUGBREAK()
 #endif
 
 #include <stdio.h>
-
 
 #ifdef PRIVATE_LOG_PATH
 FILE* OSMPCNetworkProxy_private_log_file;
@@ -92,10 +105,10 @@ int ensure_tcp_proxy_listen(OSMPCNetworkProxy component)
     struct addrinfo hints;
     struct addrinfo *result;
     int rc;
-    
+
     if (component->tcp_proxy_listen_socket != INVALID_SOCKET)
         return 1;
-    
+
     memset(&hints,0,sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -153,10 +166,10 @@ int ensure_tcp_proxy_listen(OSMPCNetworkProxy component)
 int ensure_tcp_proxy_connection(OSMPCNetworkProxy component)
 {
     int rc;
-    
+
     if (component->tcp_proxy_socket != INVALID_SOCKET)
         return 1;
-        
+
     if (!ensure_tcp_proxy_listen(component))
         return 0;
 
@@ -221,10 +234,10 @@ int ensure_tcp_proxy_connection(OSMPCNetworkProxy component)
     struct addrinfo hints;
     struct addrinfo *result;
     int rc;
-    
+
     if (component->tcp_proxy_socket != INVALID_SOCKET)
         return 1;
-    
+
     memset(&hints,0,sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -299,7 +312,7 @@ void close_tcp_proxy_connection(OSMPCNetworkProxy component)
 fmi2Status doInit(OSMPCNetworkProxy component)
 {
     int i;
-    
+
     DEBUGBREAK();
 
     /* Booleans */
@@ -525,7 +538,7 @@ FMI2_Export fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingO
     OSMPCNetworkProxy myc = (OSMPCNetworkProxy)c;
     fmi_verbose_log(myc,"fmi2SetDebugLogging(%s)", loggingOn ? "true" : "false");
     myc->loggingOn = loggingOn ? 1 : 0;
-    
+
     for (;myc->loggingCategories!=NULL && myc->nCategories>0;) free(myc->loggingCategories[--(myc->nCategories)]);
     free(myc->loggingCategories);
     myc->loggingCategories = NULL;
@@ -547,7 +560,7 @@ FMI2_Export fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingO
             myc->loggingCategories[2] = strdup("NET");
         }
     }
-    
+
     return fmi2OK;
 }
 
@@ -567,7 +580,7 @@ FMI2_Export fmi2Component fmi2Instantiate(fmi2String instanceName,
     WSADATA WsaDat;
 #endif
     OSMPCNetworkProxy myc = NULL;
-    
+
 #ifdef FMU_GUID
     if (fmuGUID!=NULL && 0!=strcmp(fmuGUID,FMU_GUID)) {
         fmi_verbose_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = NULL (GUID mismatch, expected %s)",
@@ -577,9 +590,9 @@ FMI2_Export fmi2Component fmi2Instantiate(fmi2String instanceName,
         return NULL;
     }
 #endif
-    
+
     myc = calloc(1,sizeof(struct OSMPCNetworkProxy));
-    
+
     if (myc == NULL) {
         fmi_verbose_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = NULL (alloc failure)",
             instanceName, fmuType, fmuGUID,
@@ -587,7 +600,7 @@ FMI2_Export fmi2Component fmi2Instantiate(fmi2String instanceName,
             "FUNCTIONS", visible, loggingOn);
         return NULL;
     }
-    
+
     myc->instanceName=strdup(instanceName);
     myc->fmuType=fmuType;
     myc->fmuGUID=strdup(fmuGUID);
@@ -616,14 +629,14 @@ FMI2_Export fmi2Component fmi2Instantiate(fmi2String instanceName,
         myc->loggingCategories[1] = strdup("OSMP");
         myc->loggingCategories[2] = strdup("NET");
     }
-    
+
 #ifdef _WIN32
     if ((rc=WSAStartup(MAKEWORD(2,2),&WsaDat)) != 0) {
         normal_log(myc,"NET","Error %d setting up Windows Socket Communications.",rc);
         WSACleanup();
     }
 #endif
-    
+
     if (doInit(myc) != fmi2OK) {
         fmi_verbose_log_global("fmi2Instantiate(\"%s\",%d,\"%s\",\"%s\",\"%s\",%d,%d) = NULL (doInit failure)",
             instanceName, fmuType, fmuGUID,
@@ -643,7 +656,7 @@ FMI2_Export fmi2Component fmi2Instantiate(fmi2String instanceName,
         "FUNCTIONS", visible, loggingOn, myc);
     return (fmi2Component)myc;
 }
-    
+
 FMI2_Export fmi2Status fmi2SetupExperiment(fmi2Component c,
     fmi2Boolean toleranceDefined,
     fmi2Real tolerance,

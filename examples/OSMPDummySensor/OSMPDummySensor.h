@@ -1,7 +1,7 @@
 /*
  * PMSF FMU Framework for FMI 2.0 Co-Simulation FMUs
  *
- * (C) 2016 -- 2017 PMSF IT Consulting Pierre R. Mai
+ * (C) 2016 -- 2018 PMSF IT Consulting Pierre R. Mai
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -10,9 +10,12 @@
 
 using namespace std;
 
+#ifndef FMU_SHARED_OBJECT
+#define FMI2_FUNCTION_PREFIX OSMPDummySensor_
+#endif
 #include "fmi2Functions.h"
 
-/* 
+/*
  * Logging Control
  *
  * Logging is controlled via three definitions:
@@ -39,8 +42,7 @@ using namespace std;
  */
 
 /* Boolean Variables */
-#define FMI_BOOLEAN_SOURCE_IDX 0
-#define FMI_BOOLEAN_VALID_IDX 1
+#define FMI_BOOLEAN_VALID_IDX 0
 #define FMI_BOOLEAN_LAST_IDX FMI_BOOLEAN_VALID_IDX
 #define FMI_BOOLEAN_VARS (FMI_BOOLEAN_LAST_IDX+1)
 
@@ -196,8 +198,6 @@ protected:
     string lastBuffer;
 
     /* Simple Accessors */
-    fmi2Boolean fmi_source() { return boolean_vars[FMI_BOOLEAN_SOURCE_IDX]; }
-    void set_fmi_source(fmi2Boolean value) { boolean_vars[FMI_BOOLEAN_SOURCE_IDX]=value; }
     fmi2Boolean fmi_valid() { return boolean_vars[FMI_BOOLEAN_VALID_IDX]; }
     void set_fmi_valid(fmi2Boolean value) { boolean_vars[FMI_BOOLEAN_VALID_IDX]=value; }
     fmi2Integer fmi_count() { return integer_vars[FMI_INTEGER_COUNT_IDX]; }

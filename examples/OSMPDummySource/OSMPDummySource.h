@@ -1,7 +1,7 @@
 /*
  * PMSF FMU Framework for FMI 2.0 Co-Simulation FMUs
  *
- * (C) 2016 -- 2017 PMSF IT Consulting Pierre R. Mai
+ * (C) 2016 -- 2018 PMSF IT Consulting Pierre R. Mai
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -10,12 +10,12 @@
 
 using namespace std;
 
-extern "C" {
-#define MODEL_IDENTIFIER OSMPDummySensor10
-#include "fmiFunctions.h"
-}
+#ifndef FMU_SHARED_OBJECT
+#define FMI2_FUNCTION_PREFIX OSMPDummySource_
+#endif
+#include "fmi2Functions.h"
 
-/* 
+/*
  * Logging Control
  *
  * Logging is controlled via three definitions:
@@ -42,19 +42,15 @@ extern "C" {
  */
 
 /* Boolean Variables */
-#define FMI_BOOLEAN_SOURCE_IDX 0
-#define FMI_BOOLEAN_VALID_IDX 1
+#define FMI_BOOLEAN_VALID_IDX 0
 #define FMI_BOOLEAN_LAST_IDX FMI_BOOLEAN_VALID_IDX
 #define FMI_BOOLEAN_VARS (FMI_BOOLEAN_LAST_IDX+1)
 
 /* Integer Variables */
-#define FMI_INTEGER_SENSORDATA_IN_BASELO_IDX 0
-#define FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX 1
-#define FMI_INTEGER_SENSORDATA_IN_SIZE_IDX 2
-#define FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX 3
-#define FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX 4
-#define FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX 5
-#define FMI_INTEGER_COUNT_IDX 6
+#define FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX 0
+#define FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX 1
+#define FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX 2
+#define FMI_INTEGER_COUNT_IDX 3
 #define FMI_INTEGER_LAST_IDX FMI_INTEGER_COUNT_IDX
 #define FMI_INTEGER_VARS (FMI_INTEGER_LAST_IDX+1)
 
@@ -70,39 +66,44 @@ extern "C" {
 #include <fstream>
 #include <string>
 #include <cstdarg>
+#include <set>
 
 #undef min
 #undef max
 #include "osi_sensordata.pb.h"
 
 /* FMU Class */
-class COSMPDummySensor10 {
+class COSMPDummySource {
 public:
-    /* FMI Interface mapped to C++ */
-    COSMPDummySensor10(fmiString theinstanceName, fmiString thefmuGUID, fmiString thefmuLocation, fmiString themimeType, fmiReal thetimeout, fmiBoolean thevisible, fmiBoolean theinteractive, fmiCallbackFunctions thefunctions, fmiBoolean theloggingOn);
-    ~COSMPDummySensor10();
-    fmiStatus SetDebugLogging(fmiBoolean theloggingOn);
-    static fmiComponent Instantiate(fmiString theinstanceName, fmiString thefmuGUID, fmiString thefmuLocation, fmiString themimeType, fmiReal thetimeout, fmiBoolean thevisible, fmiBoolean theinteractive, fmiCallbackFunctions thefunctions, fmiBoolean theloggingOn);
-    fmiStatus InitializeSlave(fmiReal startTime, fmiBoolean stopTimeDefined, fmiReal stopTime);
-    fmiStatus DoStep(fmiReal currentCommunicationPoint, fmiReal communicationStepSize, fmiBoolean newStep);
-    fmiStatus Terminate();
-    fmiStatus Reset();
+    /* FMI2 Interface mapped to C++ */
+    COSMPDummySource(fmi2String theinstanceName, fmi2Type thefmuType, fmi2String thefmuGUID, fmi2String thefmuResourceLocation, const fmi2CallbackFunctions* thefunctions, fmi2Boolean thevisible, fmi2Boolean theloggingOn);
+    ~COSMPDummySource();
+    fmi2Status SetDebugLogging(fmi2Boolean theloggingOn,size_t nCategories, const fmi2String categories[]);
+    static fmi2Component Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID, fmi2String fmuResourceLocation, const fmi2CallbackFunctions* functions, fmi2Boolean visible, fmi2Boolean loggingOn);
+    fmi2Status SetupExperiment(fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime);
+    fmi2Status EnterInitializationMode();
+    fmi2Status ExitInitializationMode();
+    fmi2Status DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component);
+    fmi2Status Terminate();
+    fmi2Status Reset();
     void FreeInstance();
-    fmiStatus GetReal(const fmiValueReference vr[], size_t nvr, fmiReal value[]);
-    fmiStatus GetInteger(const fmiValueReference vr[], size_t nvr, fmiInteger value[]);
-    fmiStatus GetBoolean(const fmiValueReference vr[], size_t nvr, fmiBoolean value[]);
-    fmiStatus GetString(const fmiValueReference vr[], size_t nvr, fmiString value[]);
-    fmiStatus SetReal(const fmiValueReference vr[], size_t nvr, const fmiReal value[]);
-    fmiStatus SetInteger(const fmiValueReference vr[], size_t nvr, const fmiInteger value[]);
-    fmiStatus SetBoolean(const fmiValueReference vr[], size_t nvr, const fmiBoolean value[]);
-    fmiStatus SetString(const fmiValueReference vr[], size_t nvr, const fmiString value[]);
+    fmi2Status GetReal(const fmi2ValueReference vr[], size_t nvr, fmi2Real value[]);
+    fmi2Status GetInteger(const fmi2ValueReference vr[], size_t nvr, fmi2Integer value[]);
+    fmi2Status GetBoolean(const fmi2ValueReference vr[], size_t nvr, fmi2Boolean value[]);
+    fmi2Status GetString(const fmi2ValueReference vr[], size_t nvr, fmi2String value[]);
+    fmi2Status SetReal(const fmi2ValueReference vr[], size_t nvr, const fmi2Real value[]);
+    fmi2Status SetInteger(const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[]);
+    fmi2Status SetBoolean(const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[]);
+    fmi2Status SetString(const fmi2ValueReference vr[], size_t nvr, const fmi2String value[]);
 
 protected:
     /* Internal Implementation */
-    fmiStatus doInit();
-    fmiStatus doStart(fmiReal startTime, fmiBoolean stopTimeDefined, fmiReal stopTime);
-    fmiStatus doCalc(fmiReal currentCommunicationPoint, fmiReal communicationStepSize, fmiBoolean newStep);
-    fmiStatus doTerm();
+    fmi2Status doInit();
+    fmi2Status doStart(fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime);
+    fmi2Status doEnterInitializationMode();
+    fmi2Status doExitInitializationMode();
+    fmi2Status doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component);
+    fmi2Status doTerm();
     void doFree();
 
 protected:
@@ -125,7 +126,7 @@ protected:
 #else
             vsnprintf(buffer, 1024, format, ap);
 #endif
-            private_log_file << "OSMPDummySensor10" << "::Global:FMI: " << buffer << endl;
+            private_log_file << "OSMPDummySource" << "::Global:FMI: " << buffer << endl;
             private_log_file.flush();
         }
 #endif
@@ -145,13 +146,13 @@ protected:
         if (!private_log_file.is_open())
             private_log_file.open(PRIVATE_LOG_PATH, ios::out | ios::app);
         if (private_log_file.is_open()) {
-            private_log_file << "OSMPDummySensor10" << "::" << instanceName << "<" << ((void*)this) << ">:" << category << ": " << buffer << endl;
+            private_log_file << "OSMPDummySource" << "::" << instanceName << "<" << ((void*)this) << ">:" << category << ": " << buffer << endl;
             private_log_file.flush();
         }
 #endif
 #ifdef PUBLIC_LOGGING
-        if (loggingOn)
-            functions.logger((fmiComponent)this,instanceName.c_str(),fmiOK,category,buffer);
+        if (loggingOn && loggingCategories.count(category))
+            functions.logger(functions.componentEnvironment,instanceName.c_str(),fmi2OK,category,buffer);
 #endif
 #endif
     }
@@ -178,32 +179,28 @@ protected:
 protected:
     /* Members */
     string instanceName;
+    fmi2Type fmuType;
     string fmuGUID;
-    string mimeType;
-    string fmuLocation;
-    double timeout;
+    string fmuResourceLocation;
     bool visible;
-    bool interactive;
     bool loggingOn;
-    fmiCallbackFunctions functions;
-    fmiBoolean boolean_vars[FMI_BOOLEAN_VARS];
-    fmiInteger integer_vars[FMI_INTEGER_VARS];
-    fmiReal real_vars[FMI_REAL_VARS];
+    set<string> loggingCategories;
+    fmi2CallbackFunctions functions;
+    fmi2Boolean boolean_vars[FMI_BOOLEAN_VARS];
+    fmi2Integer integer_vars[FMI_INTEGER_VARS];
+    fmi2Real real_vars[FMI_REAL_VARS];
     string string_vars[FMI_STRING_VARS];
     double last_time;
     string currentBuffer;
     string lastBuffer;
 
     /* Simple Accessors */
-    fmiBoolean fmi_source() { return boolean_vars[FMI_BOOLEAN_SOURCE_IDX]; }
-    void set_fmi_source(fmiBoolean value) { boolean_vars[FMI_BOOLEAN_SOURCE_IDX]=value; }
-    fmiBoolean fmi_valid() { return boolean_vars[FMI_BOOLEAN_VALID_IDX]; }
-    void set_fmi_valid(fmiBoolean value) { boolean_vars[FMI_BOOLEAN_VALID_IDX]=value; }
-    fmiInteger fmi_count() { return integer_vars[FMI_INTEGER_COUNT_IDX]; }
-    void set_fmi_count(fmiInteger value) { integer_vars[FMI_INTEGER_COUNT_IDX]=value; }
+    fmi2Boolean fmi_valid() { return boolean_vars[FMI_BOOLEAN_VALID_IDX]; }
+    void set_fmi_valid(fmi2Boolean value) { boolean_vars[FMI_BOOLEAN_VALID_IDX]=value; }
+    fmi2Integer fmi_count() { return integer_vars[FMI_INTEGER_COUNT_IDX]; }
+    void set_fmi_count(fmi2Integer value) { integer_vars[FMI_INTEGER_COUNT_IDX]=value; }
 
     /* Protocol Buffer Accessors */
-    bool get_fmi_sensor_data_in(osi::SensorData& data);
     void set_fmi_sensor_data_out(const osi::SensorData& data);
     void reset_fmi_sensor_data_out();
 };
