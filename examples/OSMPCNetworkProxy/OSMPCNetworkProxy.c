@@ -341,12 +341,7 @@ fmi2Status doStart(OSMPCNetworkProxy component,fmi2Boolean toleranceDefined, fmi
 {
     DEBUGBREAK();
     component->last_time = startTime;
-#ifdef FMU_LISTEN
-    if (!ensure_tcp_proxy_listen(component))
-        return fmi2Error;
-    else
-#endif
-        return fmi2OK;
+    return fmi2OK;
 }
 
 fmi2Status doEnterInitializationMode(OSMPCNetworkProxy component)
@@ -356,7 +351,12 @@ fmi2Status doEnterInitializationMode(OSMPCNetworkProxy component)
 
 fmi2Status doExitInitializationMode(OSMPCNetworkProxy component)
 {
-    return fmi2OK;
+#ifdef FMU_LISTEN
+    if (!ensure_tcp_proxy_listen(component))
+        return fmi2Error;
+    else
+#endif
+        return fmi2OK;
 }
 
 fmi2Status doCalc(OSMPCNetworkProxy component, fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
