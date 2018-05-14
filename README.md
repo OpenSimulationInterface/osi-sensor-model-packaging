@@ -3,9 +3,9 @@ OSI Sensor Model Packaging
 
 [![Build Status](https://travis-ci.org/OpenSimulationInterface/osi-sensor-model-packaging.svg?branch=master)](https://travis-ci.org/OpenSimulationInterface/osi-sensor-model-packaging)
 
-This document specifies the ways in which sensor models using the
-[Open Simulation Interface][] are to be packaged for use in simulation
-environments using FMI 2.0.
+This document specifies the ways in which sensor models, logical models
+and environmental effect models using the [Open Simulation Interface][]
+are to be packaged for use in simulation environments using FMI 2.0.
 
 This is version 0.3.0 Draft of this document. The version number is
 to be interpreted according to the [Semantic Versioning Specification
@@ -19,14 +19,32 @@ document are to be interpreted as described in [RFC 2119][].
 [SemVer2.0.0]: http://semver.org/spec/v2.0.0.html
 [RFC 2119]: https://www.ietf.org/rfc/rfc2119.txt
 
+## Kinds of Models
+
+The current specification supports the following kinds of models, that
+can be packaged as FMUs:
+
+-   Sensor models, which consume osi::SensorView as input and generate
+    osi::SensorData as output,
+
+-   Logical models, like e.g. sensor fusion models, which consume
+    osi::SensorData as input and produce osi::SensorData as output, and
+
+-   Environmental effect models, which consume osi::SensorView as input
+    and produce osi::SensorView as output.
+
+Additionally complex models that combine various aspects of the model kinds
+above are possible, however configuration and setup of such FMUs will require
+manual intervention in those cases.
+
 ## FMI 2.0
 
-The sensor model MUST be packaged as a valid [FMI][] 2.0 FMU for
+The model MUST be packaged as a valid [FMI][] 2.0 FMU for
 Co-Simulation, as specified in the [FMI 2.0 standard][]. Unless
 otherwise noted in this document all specifications in the FMI
 2.0 standard apply as-is.
 
-[FMI]: https://www.fmi-standard.org/ 
+[FMI]: https://www.fmi-standard.org/
 [FMI 2.0 standard]: https://svn.modelica.org/fmi/branches/public/specifications/v2.0/FMI_for_ModelExchange_and_CoSimulation_v2.0.pdf
 
 ## Basic Conventions
@@ -38,7 +56,7 @@ The following basic conventions apply:
     into the `VendorAnnotations` element of the `modelDescription.xml`:
 
     ```XML
-    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.3.0" osi-version="2.2.0"/></Tool>
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.3.0" osi-version="3.0.0"/></Tool>
     ```
 
     where osi-version MUST contain the major, minor and patch
@@ -50,82 +68,78 @@ The following basic conventions apply:
 
 -   The variable naming convention of the FMU MUST be `structured`.
 
--   The default experiment step size SHOULD be supplied and SHOULD 
-    indicate the actual sensor refresh rate (for the input side)
+-   The default experiment step size SHOULD be supplied and SHOULD
+    indicate the actual model refresh rate (for the input side)
     in seconds, i.e. it is OK for the simulation to only call the
-    sensor step routine at this implied rate.  If it is not supplied
-    the configuration of the sensor model communication rate has to
-    be performed manually.
+    FMU fmi2DoStep routine at this implied rate.  If it is not
+    supplied the configuration of the model communication rate is
+    determined from any input configuration data the model provides
+    (see below) or has to be performed manually.
 
--   Besides the sensor data inputs and outputs specified below
-    the sensor model can have additional inputs, outputs, and
-    parameters (i.e. all kinds of variables as specified in the
-    FMI 2.0 standard), as long as the sensor model can be run
-    correctly with all of those variables left unconnected and
-    at their default values.  The sensor model MUST NOT rely on
-    other connections (beside the sensor data connections) being
-    made.
+-   Besides the model parameters, inputs and outputs specified below
+    the model can have additional inputs, outputs, and parameters
+    (i.e. all kinds of variables as specified in the FMI 2.0 standard),
+    as long as the sensor model can be run correctly with all of those
+    variables left unconnected and at their default values.  The sensor
+    model MUST NOT rely on other connections (beside the specified data
+    connections) being made.
 
-## Sensor Data Inputs
+## Definition of binary variables
 
--   Sensor data inputs MUST be named with the prefix `OSMPSensorDataIn`.
-    If more than one sensor data input is to be configured, the prefix
-    MUST be extended by an array index designator, i.e. two inputs
-    will use the prefixes `OSMPSensorDataIn[1]` and `OSMPSensorDataIn[2]`.
-    The indices MUST start at 1 and MUST be consecutive.  If only one
-    sensor data input is needed the prefix MUST be just `OSMPSensorDataIn`.
+In order to support the efficient exchange of binary data, especially
+binary data as provided for by the OSI ProtocolBuffer definitions, the
+following convention is used to define such variables for FMI 2.0:
 
--   For each input three discrete input variables MUST be defined
-    using the prefix:
+-   For a notional binary variable of a name given by `<prefix>`,
+    which MUST be a valid structured name according to FMI 2.0,
+    three actual FMU integer variables MUST be defined:
 
-    -   `<prefix>.base.lo` (Discrete Integer Input)
-      
+    -   `<prefix>.base.lo` (Integer)
+
         This is the lower (i.e. least significant) 32bit address
-        of the OSI sensor data protocol buffer to be passed into
-        the sensor model, cast into a signed 32bit integer (without
-        changing bit values, i.e. as by reinterpret_cast in C++).
+        of the binary data buffer to be passed into or out of the
+        model, cast into a signed 32bit integer (without changing
+        bit values, i.e. as by reinterpret_cast in C++).
 
-    -   `<prefix>.base.hi` (Discrete Integer Input)
+    -   `<prefix>.base.hi` (Integer)
 
         This is the higher (i.e. most significant) 32bit address
-        of the OSI sensor data protocol buffer to be passed into 
-        the sensor model, cast into a signed 32bit integer (without
-        changing bit values, i.e. as by reinterpret_cast in C++).
-      
+        of the binary data buffer to be passed into or out of the
+        model, cast into a signed 32bit integer (without changing
+        bit values, i.e. as by reinterpret_cast in C++).
+
         Note that this variable is only used for 64bit platforms,
         for 32bit platforms it will always be 0, but MUST still be
         present (in order to support FMUs including both 32bit and
         64bit implementations).
 
-    -   `<prefix>.size` (Discrete Integer Input)
+    -   `<prefix>.size` (Integer)
 
-        This is the size of the OSI sensor data protocol buffer to 
-        be passed into the sensor model as a signed 32bit integer
-        (thus restricting the maximum size of OSI protocol buffers
-        being passed around to < 2GB of size).
-  
--   All sensor data input variables MUST be declared with
-    `causality="input"` and `variability="discrete"`.
-    
--   All sensor data input variables MUST have a default value of 0,
-    indicating no valid sensor data protocol buffer available.
+        This is the size of the binary data buffer to be passed into
+        or out of the model as a signed 32bit integer (restricting
+        the maximum size of binary data buffers being passed around
+        to < 2GB of size).
 
-    Sensor model FMUs MUST interpret values of 0 for either the base
-    address (merged from lo and hi for 64bit) or the size to indicate
-    no valid sensor data protocol buffer is available and must handle
-    this case safely.
+-   The three actual variables MUST have matching causality and
+    variability, which will be the causality and variability of
+    the notional binary variable.
 
-    Sensor model FMUs MUST interpret values of 0 for either the base
-    address (merged from lo and hi for 64bit) or the size to indicate
-    no valid sensor data protocol buffer available and must handle this
-    case safely.
+-   Unless the causality and variability combination of the actual
+    variables precludes this (i.e. for fixed or tunable
+    calculatedParameters), the variables MUST have a start value of 0,
+    indicating that no valid binary data buffer is available.
 
--   All sensor data input variables SHOULD contain an annotation
-    of the following form in the `Annotations` child element of their
+    Model FMUs MUST interpret values of 0 for either the base address
+    (merged from lo and hi for 64bit) or the size to indicate that no
+    valid binary data buffer is available and must handle this case
+    safely.
+
+-   The three actual variables MUST contain an annotation of the
+    following form in the `Annotations` child element of their
     `ScalarVariable` element of the `modelDescription.xml`:
 
     ```XML
-    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="<prefix>" role="<role>" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="<prefix>" role="<role>" mime-type="<mime-type>"/></Tool>
     ```
 
     where `<prefix>` is the prefix as defined above, and `<role>` is either
@@ -134,8 +148,16 @@ The following basic conventions apply:
     This annotation marks the variable as belonging to a notional binary
     variable named `<prefix>`, with the given variable having the specified
     `<role>`, and the transported binary content being specified by the
-    `mime-type` attribute, in this case OSI data of version 2.2.0 with 
-    data encoded as osi::SensorData.  The version parameter for MIME type
+    `mime-type` attribute, as given by `<mime-type>`, which MUST be a valid
+    MIME type specification.
+
+    In the case of OSI-specified data, the MIME type MUST be of the form
+    `application/x-open-simulation-interface; type=SensorView; version=3.0.0`
+    indicating that the binary content is conformant to a given OSI
+    version (3.0.0 in this example), containing a message of the type
+    given in the `type` parameter (`osi::SensorView` in this example).
+
+    The version parameter given for the MIME type
     `application/x-open-simulation-interface` must concur with the version
     specified as part of the top-level `osmp:osmp` annotation, and will
     default to this value if left unspecified.
@@ -145,105 +167,107 @@ The following basic conventions apply:
     or if there is not exactly one variable of each role for the same
     name.
 
-    This currently optional annotation is the basis for supporting more
-    kinds of binary variables in OSMP, should the need arise.
-
 -   The FMU MUST NOT contain any variable that is named `<prefix>`: This
     restriction ensures that there is no conflict between the notional
-    binary variable defined for the sensor input and another variable.
+    binary variable defined and another variable.
 
+-   The guaranteed lifetime of the binary data buffer pointer transported
+    through the actual variables is defined for each kind of variable
+    specified below.
 
--   The guaranteed lifetime of the sensor data protocol buffer pointer
-    provided as input to the FMU MUST be from the time of the call to 
+## Sensor View Inputs
+
+-   Sensor view inputs MUST be named with the prefix `OSMPSensorViewIn`.
+    If more than one sensor view input is to be configured, the prefix
+    MUST be extended by an array index designator, i.e. two inputs
+    will use the prefixes `OSMPSensorViewIn[1]` and `OSMPSensorViewIn[2]`.
+    The indices MUST start at 1 and MUST be consecutive.  If only one
+    sensor view input is needed the prefix MUST be just `OSMPSensorViewIn`.
+
+-   Each sensor view input MUST be define as a notional discrete binary
+    input variable, as specified above, with `causality="input"` and
+    `variability="discrete"`.
+
+-   The MIME type of the variable MUST specify the `type=SensorView`, e.g.
+    `application/x-open-simulation-interface; type=SensorView; version=3.0.0`.
+
+-   The sensor view MUST be encoded as osi::SensorView (see the OSI
+    specification documentation for more details).
+
+-   The guaranteed lifetime of the sensor view protocol buffer pointer
+    provided as input to the FMU MUST be from the time of the call to
     `fmi2SetInteger` that provides those values until the end of the
     following `fmi2DoStep` call, i.e. the sensor model can rely on the
     provided buffer remaining valid from the moment it is passed in
     until the end of the corresponding calculation, and thus does not
     need to copy the contents in that case (zero copy input).
 
+-   The sensor view passed to the model must contain data as specified
+    by the corresponding `OSMPSensorViewInConfiguration` parameter.
+
+## Sensor View Input Configuration
+
+-   For each notional sensor view input variable (named with the base
+    prefix `OSMPSensorViewIn`) a corresponding calculatedParameter
+    (named with base prefix `OSMPSensorViewInConfigRequest`) and a
+    parameter (named with base prefix `OSMPSensorViewInConfig`) CAN
+    exist. If the calculatedParameter exists, then the corresponding
+    parameter MUST exist.
+
+-   If the calculatedParameter exists it MUST be named with the prefix
+    `OSMPSensorViewInConfigRequest`, and MUST have a `causality` of
+    `calculatedParameter` and a variability of either `fixed` or
+    `tunable`.
+
+-   If the parameter exists it MUST be named with the prefix
+    `OSMPSensorViewInConfig`, and MUST have a `causality` of
+    `parameter` and a variability of either `fixed` or `tunable`,
+    where the variability MUST match the variability of the
+    corresponding calculatedParameter.
+
+-   The MIME type of both variables MUST specify the
+    `type=SensorViewConfiguration`, e.g.
+    `application/x-open-simulation-interface; type=SensorViewConfiguration; version=3.0.0`.
+
+-   The variables values MUST be encoded as osi::SensorViewConfiguration
+    (see the OSI specification documentation for more details).
+
+-   As long as no non-zero value has been assigned to the corresponding
+    `OSMPSensorViewInConfig` parameter, the calculated parameter value
+    MUST be the desired sensor view configuration for the corresponding
+    `OSMPSensorViewIn` variable, based on model internal requirements
+    and any other parameters on which this calculated parameter depends.
+
+    Once a non-zero value has been assigned to the corresponding
+    `OSMPSensorViewInConfig` parameter, the value of this calculated
+    parameter MUST be an encoded OSI protocol buffer containing the
+    same data as the parameter.
+
+-   The simulation environment SHOULD, during FMI initialization mode,
+    query the `OSMPSensorViewInConfigRequest` calculatedParameter value,
+    and, taking this value into account, determine a suitable and supported
+    SensorView configuration. The simulation environment MUST set this
+    configuration using the corresponding `OSMPSensorViewInConfig` parameter
+    before exiting initialization mode.
+
+## Sensor Data Outputs
+
+-   Sensor data outputs MUST be named with the prefix `OSMPSensorDataOut`.
+    If more than one sensor data output is to be provided, the prefix
+    MUST be extended by an array index designator, i.e. two outputs
+    will use the prefixes `OSMPSensorDataOut[1]` and `OSMPSensorDataOut[2]`.
+    The indices MUST start at 1 and MUST be consecutive.  If only one
+    sensor data output is needed the prefix MUST be just `OSMPSensorDataOut`.
+
+-   Each sensor data output MUST be define as a notional discrete binary
+    output variable, as specified above, with `causality="output"` and
+    `variability="discrete"`.
+
+-   The MIME type of the variable MUST specify the `type=SensorData`, e.g.
+    `application/x-open-simulation-interface; type=SensorData; version=3.0.0`.
+
 -   The sensor data MUST be encoded as osi::SensorData (see the OSI
     specification documentation for more details).
-
-## Sensor Data Output
-
--   Sensor data output MUST be named with the prefix `OSMPSensorDataOut`.
-    Currently no scenario is envisaged where more than one sensor
-    data output is needed, however if such a need ever arises the
-    same rules as for multiple sensor data inputs are going to
-    apply, hence prefixes of the form `OSMPSensorDataOut[1]`,
-    `OSMPSensorDataOut[2]`, etc., are reserved for the time being.
-
--   For each output three discrete output variables MUST be defined
-    using the prefix:
-
-    -   `<prefix>.base.lo` (Discrete Integer Output)
-      
-        This is the lower (i.e. least significant) 32bit address
-        of the OSI sensor data protocol buffer to be passed out of
-        the sensor model, cast into a signed 32bit integer (without
-        changing bit values, i.e. as by reinterpret_cast in C++).
-
-    -   `<prefix>.base.hi` (Discrete Integer Output)
-
-        This is the higher (i.e. most significant) 32bit address
-        of the OSI sensor data protocol buffer to be passed out of
-        the sensor model, cast into a signed 32bit integer (without
-        changing bit values, i.e. as by reinterpret_cast in C++).
-      
-        Note that this variable is only used for 64bit platforms,
-        for 32bit platforms it will always be 0, but must still be
-        present (in order to support FMUs including both 32bit and
-        64bit implementations).
-
-    -   `<prefix>.size` (Discrete Integer Output)
-
-        This is the size of the OSI sensor data protocol buffer to
-        be passed out of the sensor model as a signed 32bit integer
-        (thus restricting the maximum size of OSI protocol buffers
-        being passed around to < 2GB of size).
-  
--   All sensor data output variables MUST be declared with
-    `causality="output"` and `variability="discrete"`.
-    
--   All sensor data output variables MUST have a default value of 0,
-    indicating no valid sensor data protocol buffer available.
-
-    Simulations MUST interpret values of 0 for either the base address
-    (merged from lo and hi for 64bit) or the size to indicate no valid
-    sensor data protocol buffer is available and must handle this case
-    safely.
-
--   All sensor data output variables SHOULD contain an annotation
-    of the following form in the `Annotations` child element of their
-    `ScalarVariable` element of the `modelDescription.xml`:
-
-    ```XML
-    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="<prefix>" role="<role>" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
-    ```
-
-    where `<prefix>` is the prefix as defined above, and `<role>` is either
-    `base.lo`, `base.hi` or `size`, depending on the variable.
-
-    This annotation marks the variable as belonging to a notional binary
-    variable named `<prefix>`, with the given variable having the specified
-    `<role>`, and the transported binary content being specified by the
-    `mime-type` attribute, in this case OSI data of version 2.2.0 with 
-    data encoded as osi::SensorData.  The version parameter for MIME type
-    `application/x-open-simulation-interface` must concur with the version
-    specified as part of the top-level `osmp:osmp` annotation, and will
-    default to this value if left unspecified.
-
-    It is an error if the mime-type specified in the annotations for one
-    notional binary variable (i.e. with identical name attribute) differ,
-    or if there is not exactly one variable of each role for the same
-    name.
-
-    This currently optional annotation is the basis for supporting more
-    kinds of binary variables in OSMP, should the need arise.
-
--   The FMU MUST NOT contain any variable that is named `<prefix>`: This
-    restriction ensures that there is no conflict between the notional
-    binary variable defined for the sensor input and another variable.
 
 -   The guaranteed lifetime of the sensor data protocol buffer pointer
     provided as output by the FMU MUST be from the end of the call to
@@ -262,9 +286,6 @@ The following basic conventions apply:
     chain FMUs with protocol buffer inputs/outputs in a normal
     simulation engine like e.g. MATLAB/Simulink, and get valid
     results.
-
--   The sensor data MUST be encoded as osi::SensorData (see the OSI
-    specification documentation for more details).
 
 ## Examples
 
@@ -286,43 +307,43 @@ model FMU with one input and output and no additional features:
     canNotUseMemoryManagementFunctions="true"/>
   <DefaultExperiment startTime="0.0" stepSize="0.020"/>
   <VendorAnnotations>
-    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.3.0" osi-version="2.2.0"/></Tool>
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.3.0" osi-version="3.0.0"/></Tool>
   </VendorAnnotations>
   <ModelVariables>
-    <ScalarVariable name="OSMPSensorDataIn.base.lo" valueReference="0" causality="input" variability="discrete">
+    <ScalarVariable name="OSMPSensorViewIn.base.lo" valueReference="0" causality="input" variability="discrete">
       <Integer start="0"/>
       <Annotations>
-        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataIn" role="base.lo" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorViewIn" role="base.lo" mime-type="application/x-open-simulation-interface; type=SensorView; version=3.0.0"/></Tool>
       </Annotations>
     </ScalarVariable>
-    <ScalarVariable name="OSMPSensorDataIn.base.hi" valueReference="1" causality="input" variability="discrete">
+    <ScalarVariable name="OSMPSensorViewIn.base.hi" valueReference="1" causality="input" variability="discrete">
       <Integer start="0"/>
       <Annotations>
-        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataIn" role="base.hi" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorViewIn" role="base.hi" mime-type="application/x-open-simulation-interface; type=SensorView; version=3.0.0"/></Tool>
       </Annotations>
     </ScalarVariable>
-    <ScalarVariable name="OSMPSensorDataIn.size" valueReference="2" causality="input" variability="discrete">
+    <ScalarVariable name="OSMPSensorViewIn.size" valueReference="2" causality="input" variability="discrete">
       <Integer start="0"/>
       <Annotations>
-        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataIn" role="size" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorViewIn" role="size" mime-type="application/x-open-simulation-interface; type=SensorView; version=3.0.0"/></Tool>
       </Annotations>
     </ScalarVariable>
     <ScalarVariable name="OSMPSensorDataOut.base.lo" valueReference="3" causality="output" variability="discrete" initial="exact">
       <Integer start="0"/>
       <Annotations>
-        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.lo" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.lo" mime-type="application/x-open-simulation-interface; type=SensorData; version=3.0.0"/></Tool>
       </Annotations>
     </ScalarVariable>
     <ScalarVariable name="OSMPSensorDataOut.base.hi" valueReference="4" causality="output" variability="discrete" initial="exact">
       <Integer start="0"/>
       <Annotations>
-        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.hi" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.hi" mime-type="application/x-open-simulation-interface; type=SensorData; version=3.0.0"/></Tool>
       </Annotations>
     </ScalarVariable>
     <ScalarVariable name="OSMPSensorDataOut.size" valueReference="5" causality="output" variability="discrete" initial="exact">
       <Integer start="0"/>
       <Annotations>
-        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="size" mime-type="application/x-open-simulation-interface; type=SensorData; version=2.2.0"/></Tool>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="size" mime-type="application/x-open-simulation-interface; type=SensorData; version=3.0.0"/></Tool>
       </Annotations>
     </ScalarVariable>
   </ModelVariables>
@@ -337,13 +358,6 @@ model FMU with one input and output and no additional features:
 ```
 
 ## TODOs
-
--   Define auto configuration mechanism, so that sensor models can
-    automatically provide relevant parameters for the environment
-    simulation (e.g. position and field of view of the sensor, etc.)
-    to the simulation, e.g. via computed parameters that provide a
-    protocol buffer configuration record, or through direct FMI 
-    constants.
 
 -   Support various raw data streams, like e.g. video streams, or raw
     reflection lists, in the same vein as the current object list
