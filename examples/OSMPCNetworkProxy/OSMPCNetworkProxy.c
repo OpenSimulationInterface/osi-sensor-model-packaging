@@ -106,8 +106,12 @@ int ensure_tcp_proxy_listen(OSMPCNetworkProxy component)
     struct addrinfo *result;
     int rc;
 
-    if (component->tcp_proxy_listen_socket != INVALID_SOCKET)
+    if( component->tcp_proxy_listen_socket != INVALID_SOCKET &&
+        strcmp(component->string_vars[FMI_STRING_ADDRESS_IDX], strdup(FMU_DEFAULT_ADDRESS)) == 0 &&
+        strcmp(component->string_vars[FMI_STRING_PORT_IDX], strdup(FMU_DEFAULT_PORT)) == 0 )
+    {
         return 1;
+    }
 
     memset(&hints,0,sizeof(hints));
     hints.ai_family = AF_UNSPEC;
