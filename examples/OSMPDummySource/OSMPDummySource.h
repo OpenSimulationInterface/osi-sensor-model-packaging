@@ -47,9 +47,9 @@ using namespace std;
 #define FMI_BOOLEAN_VARS (FMI_BOOLEAN_LAST_IDX+1)
 
 /* Integer Variables */
-#define FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX 0
-#define FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX 1
-#define FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX 2
+#define FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX 0
+#define FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX 1
+#define FMI_INTEGER_SENSORVIEW_OUT_SIZE_IDX 2
 #define FMI_INTEGER_COUNT_IDX 3
 #define FMI_INTEGER_LAST_IDX FMI_INTEGER_COUNT_IDX
 #define FMI_INTEGER_VARS (FMI_INTEGER_LAST_IDX+1)
@@ -70,7 +70,7 @@ using namespace std;
 
 #undef min
 #undef max
-#include "osi_sensordata.pb.h"
+#include "osi_sensorview.pb.h"
 
 /* FMU Class */
 class COSMPDummySource {
@@ -201,6 +201,6 @@ protected:
     void set_fmi_count(fmi2Integer value) { integer_vars[FMI_INTEGER_COUNT_IDX]=value; }
 
     /* Protocol Buffer Accessors */
-    void set_fmi_sensor_data_out(const osi::SensorData& data);
-    void reset_fmi_sensor_data_out();
+    void set_fmi_sensor_view_out(const osi3::SensorView& data);
+    void reset_fmi_sensor_view_out();
 };

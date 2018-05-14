@@ -47,9 +47,9 @@ using namespace std;
 #define FMI_BOOLEAN_VARS (FMI_BOOLEAN_LAST_IDX+1)
 
 /* Integer Variables */
-#define FMI_INTEGER_SENSORDATA_IN_BASELO_IDX 0
-#define FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX 1
-#define FMI_INTEGER_SENSORDATA_IN_SIZE_IDX 2
+#define FMI_INTEGER_SENSORVIEW_IN_BASELO_IDX 0
+#define FMI_INTEGER_SENSORVIEW_IN_BASEHI_IDX 1
+#define FMI_INTEGER_SENSORVIEW_IN_SIZE_IDX 2
 #define FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX 3
 #define FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX 4
 #define FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX 5
@@ -73,6 +73,7 @@ using namespace std;
 
 #undef min
 #undef max
+#include "osi_sensorview.pb.h"
 #include "osi_sensordata.pb.h"
 
 /* FMU Class */
@@ -204,7 +205,7 @@ protected:
     void set_fmi_count(fmi2Integer value) { integer_vars[FMI_INTEGER_COUNT_IDX]=value; }
 
     /* Protocol Buffer Accessors */
-    bool get_fmi_sensor_data_in(osi::SensorData& data);
-    void set_fmi_sensor_data_out(const osi::SensorData& data);
+    bool get_fmi_sensor_view_in(osi3::SensorView& data);
+    void set_fmi_sensor_data_out(const osi3::SensorData& data);
     void reset_fmi_sensor_data_out();
 };
