@@ -249,6 +249,12 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
                         obj->mutable_base()->mutable_dimension()->set_length(veh.base().dimension().length());
                         obj->mutable_base()->mutable_dimension()->set_width(veh.base().dimension().width());
                         obj->mutable_base()->mutable_dimension()->set_height(veh.base().dimension().height());
+                        
+                        osi3::DetectedMovingObject::CandidateMovingObject* candidate = obj->add_candidate();
+                        candidate->set_type(veh.type());
+                        candidate->mutable_vehicle_classification()->CopyFrom(veh.vehicle_classification());
+                        candidate->set_probability(1);
+                        
                         normal_log("OSI","Output Vehicle %d[%d] Probability %f Relative Position: %f,%f,%f (%f,%f,%f)",i,veh.id().value(),obj->header().existence_probability(),rel_x,rel_y,rel_z,obj->base().position().x(),obj->base().position().y(),obj->base().position().z());
                         i++;
                     } else {
