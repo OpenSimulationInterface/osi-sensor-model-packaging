@@ -100,19 +100,19 @@ void encode_pointer_to_integer(const void* ptr,fmi2Integer& hi,fmi2Integer& lo)
 #endif
 }
 
-bool COSMPDummySensor::get_fmi_sensor_data_in(osi::SensorData& data)
+bool COSMPDummySensor::get_fmi_sensor_view_in(osi3::SensorView& data)
 {
-    if (integer_vars[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX] > 0) {
-        void* buffer = decode_integer_to_pointer(integer_vars[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX]);
-        normal_log("OSMP","Got %08X %08X, reading from %p ...",integer_vars[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX],buffer);
-        data.ParseFromArray(buffer,integer_vars[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX]);
+    if (integer_vars[FMI_INTEGER_SENSORVIEW_IN_SIZE_IDX] > 0) {
+        void* buffer = decode_integer_to_pointer(integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASELO_IDX]);
+        normal_log("OSMP","Got %08X %08X, reading from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASELO_IDX],buffer);
+        data.ParseFromArray(buffer,integer_vars[FMI_INTEGER_SENSORVIEW_IN_SIZE_IDX]);
         return true;
     } else {
         return false;
     }
 }
 
-void COSMPDummySensor::set_fmi_sensor_data_out(const osi::SensorData& data)
+void COSMPDummySensor::set_fmi_sensor_data_out(const osi3::SensorData& data)
 {
     data.SerializeToString(&currentBuffer);
     encode_pointer_to_integer(currentBuffer.data(),integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX]);
@@ -194,37 +194,38 @@ void rotatePoint(double x, double y, double z,double yaw,double pitch,double rol
 fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
 {
     DEBUGBREAK();
-    osi::SensorData currentIn,currentOut;
+    osi3::SensorView currentIn;
+    osi3::SensorData currentOut;
     double time = currentCommunicationPoint+communicationStepSize;
     normal_log("OSI","Calculating Sensor at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
-    if (get_fmi_sensor_data_in(currentIn)) {
+    if (get_fmi_sensor_view_in(currentIn)) {
         double ego_x=0, ego_y=0, ego_z=0;
-        osi::Identifier ego_id = currentIn.ego_vehicle_id();
+        osi3::Identifier ego_id = currentIn.global_ground_truth().host_vehicle_id();
         normal_log("OSI","Looking for EgoVehicle with ID: %d",ego_id.value());
-        for_each(currentIn.ground_truth().global_ground_truth().vehicle().begin(),currentIn.ground_truth().global_ground_truth().vehicle().end(),
-            [this, ego_id, &ego_x, &ego_y, &ego_z](const osi::Vehicle& veh) {
-                normal_log("OSI","Vehicle with ID %d is EgoVehicle: %d",veh.id().value(), veh.ego_vehicle() ? 1:0);
-                if ((veh.id().value() == ego_id.value()) || (veh.ego_vehicle())) {
-                    normal_log("OSI","Found EgoVehicle with ID: %d",veh.id().value());
-                    ego_x = veh.base().position().x();
-                    ego_y = veh.base().position().y();
-                    ego_z = veh.base().position().z();
+        for_each(currentIn.global_ground_truth().moving_object().begin(),currentIn.global_ground_truth().moving_object().end(),
+            [this, ego_id, &ego_x, &ego_y, &ego_z](const osi3::MovingObject& obj) {
+                normal_log("OSI","MovingObject with ID %d is EgoVehicle: %d",obj.id().value(), obj.id().value() == ego_id.value());
+                if (obj.id().value() == ego_id.value()) {
+                    normal_log("OSI","Found EgoVehicle with ID: %d",obj.id().value());
+                    ego_x = obj.base().position().x();
+                    ego_y = obj.base().position().y();
+                    ego_z = obj.base().position().z();
                 }
             });
         normal_log("OSI","Current Ego Position: %f,%f,%f", ego_x, ego_y, ego_z);
 
         /* Clear Output */
         currentOut.Clear();
-        /* Copy Everything */
-        currentOut.MergeFrom(currentIn);
+        currentOut.mutable_version()->CopyFrom(osi3::InterfaceVersion::descriptor()->file()->options().GetExtension(osi3::current_interface_version));
         /* Adjust Timestamps and Ids */
         currentOut.mutable_timestamp()->set_seconds((long long int)floor(time));
         currentOut.mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
-        currentOut.mutable_object()->Clear();
+        /* Copy of SensorView */
+        currentOut.add_sensor_view()->CopyFrom(currentIn);
 
         int i=0;
-        for_each(currentIn.ground_truth().global_ground_truth().vehicle().begin(),currentIn.ground_truth().global_ground_truth().vehicle().end(),
-            [this,&i,&currentOut,ego_id,ego_x,ego_y,ego_z](const osi::Vehicle& veh) {
+        for_each(currentIn.global_ground_truth().moving_object().begin(),currentIn.global_ground_truth().moving_object().end(),
+            [this,&i,&currentIn,&currentOut,ego_id,ego_x,ego_y,ego_z](const osi3::MovingObject& veh) {
                 if (veh.id().value() != ego_id.value()) {
                     // NOTE: We currently do not take sensor mounting position into account,
                     // i.e. sensor-relative coordinates are relative to center of bounding box
@@ -236,16 +237,19 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
                     rotatePoint(trans_x,trans_y,trans_z,veh.base().orientation().yaw(),veh.base().orientation().pitch(),veh.base().orientation().roll(),rel_x,rel_y,rel_z);
                     double distance = sqrt(rel_x*rel_x + rel_y*rel_y + rel_z*rel_z);
                     if ((distance <= 150.0) && (rel_x/distance > 0.866025)) {
-                        osi::DetectedObject *obj = currentOut.mutable_object()->Add();
-                        obj->mutable_tracking_id()->set_value(i);
-                        obj->mutable_object()->mutable_position()->set_x(veh.base().position().x());
-                        obj->mutable_object()->mutable_position()->set_y(veh.base().position().y());
-                        obj->mutable_object()->mutable_position()->set_z(veh.base().position().z());
-                        obj->mutable_object()->mutable_dimension()->set_length(veh.base().dimension().length());
-                        obj->mutable_object()->mutable_dimension()->set_width(veh.base().dimension().width());
-                        obj->mutable_object()->mutable_dimension()->set_height(veh.base().dimension().height());
-                        obj->set_existence_probability(cos((distance-75.0)/75.0));
-                        normal_log("OSI","Output Vehicle %d[%d] Probability %f Relative Position: %f,%f,%f (%f,%f,%f)",i,veh.id().value(),obj->existence_probability(),rel_x,rel_y,rel_z,obj->object().position().x(),obj->object().position().y(),obj->object().position().z());
+                        osi3::DetectedMovingObject *obj = currentOut.mutable_moving_object()->Add();
+                        obj->mutable_header()->add_ground_truth_id()->CopyFrom(veh.id());
+                        obj->mutable_header()->mutable_tracking_id()->set_value(i);
+                        obj->mutable_header()->set_existence_probability(cos((distance-75.0)/75.0));
+                        obj->mutable_header()->set_measurement_state(osi3::DetectedItemHeader_MeasurementState_MEASUREMENT_STATE_MEASURED);
+                        obj->mutable_header()->add_sensor_id()->CopyFrom(currentIn.sensor_id());
+                        obj->mutable_base()->mutable_position()->set_x(veh.base().position().x());
+                        obj->mutable_base()->mutable_position()->set_y(veh.base().position().y());
+                        obj->mutable_base()->mutable_position()->set_z(veh.base().position().z());
+                        obj->mutable_base()->mutable_dimension()->set_length(veh.base().dimension().length());
+                        obj->mutable_base()->mutable_dimension()->set_width(veh.base().dimension().width());
+                        obj->mutable_base()->mutable_dimension()->set_height(veh.base().dimension().height());
+                        normal_log("OSI","Output Vehicle %d[%d] Probability %f Relative Position: %f,%f,%f (%f,%f,%f)",i,veh.id().value(),obj->header().existence_probability(),rel_x,rel_y,rel_z,obj->base().position().x(),obj->base().position().y(),obj->base().position().z());
                         i++;
                     } else {
                         normal_log("OSI","Ignoring Vehicle %d[%d] Outside Sensor Scope Relative Position: %f,%f,%f (%f,%f,%f)",i,veh.id().value(),veh.base().position().x()-ego_x,veh.base().position().y()-ego_y,veh.base().position().z()-ego_z,veh.base().position().x(),veh.base().position().y(),veh.base().position().z());
@@ -260,7 +264,7 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         /* Serialize */
         set_fmi_sensor_data_out(currentOut);
         set_fmi_valid(true);
-        set_fmi_count(currentOut.object_size());
+        set_fmi_count(currentOut.moving_object_size());
     } else {
         /* We have no valid input, so no valid output */
         normal_log("OSI","No valid input, therefore providing no valid output.");

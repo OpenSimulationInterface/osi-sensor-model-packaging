@@ -100,20 +100,20 @@ void encode_pointer_to_integer(const void* ptr,fmi2Integer& hi,fmi2Integer& lo)
 #endif
 }
 
-void COSMPDummySource::set_fmi_sensor_data_out(const osi::SensorData& data)
+void COSMPDummySource::set_fmi_sensor_view_out(const osi3::SensorView& data)
 {
     data.SerializeToString(&currentBuffer);
-    encode_pointer_to_integer(currentBuffer.data(),integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX]);
-    integer_vars[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX]=(fmi2Integer)currentBuffer.length();
-    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX],currentBuffer.data());
+    encode_pointer_to_integer(currentBuffer.data(),integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX]);
+    integer_vars[FMI_INTEGER_SENSORVIEW_OUT_SIZE_IDX]=(fmi2Integer)currentBuffer.length();
+    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX],currentBuffer.data());
     swap(currentBuffer,lastBuffer);
 }
 
-void COSMPDummySource::reset_fmi_sensor_data_out()
+void COSMPDummySource::reset_fmi_sensor_view_out()
 {
-    integer_vars[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX]=0;
-    integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX]=0;
-    integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX]=0;
+    integer_vars[FMI_INTEGER_SENSORVIEW_OUT_SIZE_IDX]=0;
+    integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX]=0;
+    integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX]=0;
 }
 
 /*
@@ -182,41 +182,59 @@ void rotatePoint(double x, double y, double z,double yaw,double pitch,double rol
 fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
 {
     DEBUGBREAK();
-    osi::SensorData currentOut;
+    osi3::SensorView currentOut;
     double time = currentCommunicationPoint+communicationStepSize;
 
     normal_log("OSI","Calculating SensorView at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
 
     /* We act as GroundTruth Source */
-    static double y_offsets[10] = { 3.0, 3.0, 3.0, 0.5, 0, -0.5, -3.0, -3.0, -3.0, -3.0 };
-    static double x_offsets[10] = { 0.0, 40.0, 100.0, 100.0, 0.0, 150.0, 5.0, 45.0, 85.0, 125.0 };
-    static double x_speeds[10] = { 29.0, 30.0, 31.0, 25.0, 26.0, 28.0, 20.0, 22.0, 22.5, 23.0 };
+    static double source_y_offsets[10] = { 3.0, 3.0, 3.0, 0.25, 0, -0.25, -3.0, -3.0, -3.0, -3.0 };
+    static double source_x_offsets[10] = { 0.0, 40.0, 100.0, 100.0, 0.0, 150.0, 5.0, 45.0, 85.0, 125.0 };
+    static double source_x_speeds[10] = { 29.0, 30.0, 31.0, 25.0, 26.0, 28.0, 20.0, 22.0, 22.5, 23.0 };
+    static osi3::MovingObject_VehicleClassification_Type source_veh_types[10] = {
+        osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR,
+        osi3::MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR,
+        osi3::MovingObject_VehicleClassification_Type_TYPE_COMPACT_CAR,
+        osi3::MovingObject_VehicleClassification_Type_TYPE_DELIVERY_VAN,
+        osi3::MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR,
+        osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR,
+        osi3::MovingObject_VehicleClassification_Type_TYPE_COMPACT_CAR,
+        osi3::MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR,
+        osi3::MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE,
+        osi3::MovingObject_VehicleClassification_Type_TYPE_BUS };
 
     currentOut.Clear();
-    currentOut.mutable_ego_vehicle_id()->set_value(4);
-    osi::SensorDataGroundTruth *currentSDGT = currentOut.mutable_ground_truth();
-    osi::GroundTruth *currentGT = currentSDGT->mutable_global_ground_truth();
+    currentOut.mutable_version()->CopyFrom(osi3::InterfaceVersion::descriptor()->file()->options().GetExtension(osi3::current_interface_version));
+    currentOut.mutable_sensor_id()->set_value(10000);
+    currentOut.mutable_host_vehicle_id()->set_value(14);
+    osi3::GroundTruth *currentGT = currentOut.mutable_global_ground_truth();
     currentOut.mutable_timestamp()->set_seconds((long long int)floor(time));
     currentOut.mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
     currentGT->mutable_timestamp()->set_seconds((long long int)floor(time));
     currentGT->mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
+    currentGT->mutable_host_vehicle_id()->set_value(14);
+
+    // Vehicles
     for (unsigned int i=0;i<10;i++) {
-        osi::Vehicle *veh = currentGT->add_vehicle();
-        veh->set_type(osi::Vehicle_Type_TYPE_CAR);
-        veh->mutable_id()->set_value(i);
-        veh->set_ego_vehicle(i==4);
-        veh->mutable_light_state()->set_brake_light_state(osi::Vehicle_LightState_BrakeLightState_BRAKE_LIGHT_STATE_OFF);
+        osi3::MovingObject *veh = currentGT->add_moving_object();
+        veh->mutable_id()->set_value(10+i);
+        veh->set_type(osi3::MovingObject_Type_TYPE_VEHICLE);
+        auto vehclass = veh->mutable_vehicle_classification();
+        vehclass->set_type(source_veh_types[i]);
+        auto vehlights = vehclass->mutable_light_state();
+        vehlights->set_indicator_state(osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_OFF);
+        vehlights->set_brake_light_state(osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_OFF);
         veh->mutable_base()->mutable_dimension()->set_height(1.5);
         veh->mutable_base()->mutable_dimension()->set_width(2.0);
         veh->mutable_base()->mutable_dimension()->set_length(5.0);
-        veh->mutable_base()->mutable_position()->set_x(x_offsets[i]+time*x_speeds[i]);
-        veh->mutable_base()->mutable_position()->set_y(y_offsets[i]+sin(time/x_speeds[i])*0.25);
+        veh->mutable_base()->mutable_position()->set_x(source_x_offsets[i]+time*source_x_speeds[i]);
+        veh->mutable_base()->mutable_position()->set_y(source_y_offsets[i]+sin(time/source_x_speeds[i])*0.25);
         veh->mutable_base()->mutable_position()->set_z(0.0);
-        veh->mutable_base()->mutable_velocity()->set_x(x_speeds[i]);
-        veh->mutable_base()->mutable_velocity()->set_y(cos(time/x_speeds[i])*0.25/x_speeds[i]);
+        veh->mutable_base()->mutable_velocity()->set_x(source_x_speeds[i]);
+        veh->mutable_base()->mutable_velocity()->set_y(cos(time/source_x_speeds[i])*0.25/source_x_speeds[i]);
         veh->mutable_base()->mutable_velocity()->set_z(0.0);
         veh->mutable_base()->mutable_acceleration()->set_x(0.0);
-        veh->mutable_base()->mutable_acceleration()->set_y(-sin(time/x_speeds[i])*0.25/(x_speeds[i]*x_speeds[i]));
+        veh->mutable_base()->mutable_acceleration()->set_y(-sin(time/source_x_speeds[i])*0.25/(source_x_speeds[i]*source_x_speeds[i]));
         veh->mutable_base()->mutable_acceleration()->set_z(0.0);
         veh->mutable_base()->mutable_orientation()->set_pitch(0.0);
         veh->mutable_base()->mutable_orientation()->set_roll(0.0);
@@ -226,9 +244,10 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         veh->mutable_base()->mutable_orientation_rate()->set_yaw(0.0);
         normal_log("OSI","GT: Adding Vehicle %d[%d] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)",i,veh->id().value(),veh->base().position().x(),veh->base().position().y(),veh->base().position().z(),veh->base().velocity().x(),veh->base().velocity().y(),veh->base().velocity().z());
     }
-    set_fmi_sensor_data_out(currentOut);
+
+    set_fmi_sensor_view_out(currentOut);
     set_fmi_valid(true);
-    set_fmi_count(currentOut.object_size());
+    set_fmi_count(currentGT->moving_object_size());
     return fmi2OK;
 }
 

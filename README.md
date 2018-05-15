@@ -7,7 +7,7 @@ This document specifies the ways in which sensor models, logical models
 and environmental effect models using the [Open Simulation Interface][]
 are to be packaged for use in simulation environments using FMI 2.0.
 
-This is version 0.3.0 Draft of this document. The version number is
+This is version 1.0.0 of this document. The version number is
 to be interpreted according to the [Semantic Versioning Specification
 (SemVer) 2.0.0][SemVer2.0.0].
 
@@ -56,15 +56,19 @@ The following basic conventions apply:
     into the `VendorAnnotations` element of the `modelDescription.xml`:
 
     ```XML
-    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.3.0" osi-version="3.0.0"/></Tool>
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="1.0.0" osi-version="3.0.0"/></Tool>
     ```
 
-    where osi-version MUST contain the major, minor and patch
-    version number of the open simulation interface specification
-    that this model was compiled against.  This is to ensure that
-    the importing environment can determine which OSI version to
-    use prior to communicating with the FMU, which might be
+    where the `osi-version` attribute SHOULD contain the major, minor
+    and patch version number of the open simulation interface
+    specification that this model was compiled against.  This is to
+    ensure that the importing environment can determine which OSI
+    version to use prior to communicating with the FMU, which might be
     impossible in cases of major version changes.
+
+    In case this specification is used without OSI data being
+    transported across binary variables, this attribute SHOULD be
+    left unspecified.
 
 -   The variable naming convention of the FMU MUST be `structured`.
 
@@ -158,9 +162,10 @@ following convention is used to define such variables for FMI 2.0:
     given in the `type` parameter (`osi::SensorView` in this example).
 
     The version parameter given for the MIME type
-    `application/x-open-simulation-interface` must concur with the version
-    specified as part of the top-level `osmp:osmp` annotation, and will
-    default to this value if left unspecified.
+    `application/x-open-simulation-interface` will default to the version
+    specified in the `osi-version` attribute as part of the top-level
+    `osmp:osmp` annotation.  It is an error if a version number is specified
+    neither as part of the MIME type nor using the `osi-version` attribute.
 
     It is an error if the mime-type specified in the annotations for one
     notional binary variable (i.e. with identical name attribute) differ,
@@ -307,7 +312,7 @@ model FMU with one input and output and no additional features:
     canNotUseMemoryManagementFunctions="true"/>
   <DefaultExperiment startTime="0.0" stepSize="0.020"/>
   <VendorAnnotations>
-    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="0.3.0" osi-version="3.0.0"/></Tool>
+    <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="1.0.0" osi-version="3.0.0"/></Tool>
   </VendorAnnotations>
   <ModelVariables>
     <ScalarVariable name="OSMPSensorViewIn.base.lo" valueReference="0" causality="input" variability="discrete">
