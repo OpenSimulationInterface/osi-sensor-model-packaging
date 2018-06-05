@@ -146,17 +146,21 @@ fmi2Status COSMPDummySource::doInit()
 fmi2Status COSMPDummySource::doStart(fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime)
 {
     DEBUGBREAK();
-    last_time = startTime;
+
     return fmi2OK;
 }
 
 fmi2Status COSMPDummySource::doEnterInitializationMode()
 {
+    DEBUGBREAK();
+
     return fmi2OK;
 }
 
 fmi2Status COSMPDummySource::doExitInitializationMode()
 {
+    DEBUGBREAK();
+
     return fmi2OK;
 }
 
@@ -182,6 +186,7 @@ void rotatePoint(double x, double y, double z,double yaw,double pitch,double rol
 fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
 {
     DEBUGBREAK();
+
     osi3::SensorView currentOut;
     double time = currentCommunicationPoint+communicationStepSize;
 
@@ -242,7 +247,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         veh->mutable_base()->mutable_orientation_rate()->set_pitch(0.0);
         veh->mutable_base()->mutable_orientation_rate()->set_roll(0.0);
         veh->mutable_base()->mutable_orientation_rate()->set_yaw(0.0);
-        normal_log("OSI","GT: Adding Vehicle %d[%d] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)",i,veh->id().value(),veh->base().position().x(),veh->base().position().y(),veh->base().position().z(),veh->base().velocity().x(),veh->base().velocity().y(),veh->base().velocity().z());
+        normal_log("OSI","GT: Adding Vehicle %d[%llu] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)",i,veh->id().value(),veh->base().position().x(),veh->base().position().y(),veh->base().position().z(),veh->base().velocity().x(),veh->base().velocity().y(),veh->base().velocity().z());
     }
 
     set_fmi_sensor_view_out(currentOut);
@@ -273,8 +278,7 @@ COSMPDummySource::COSMPDummySource(fmi2String theinstanceName, fmi2Type thefmuTy
     fmuResourceLocation(thefmuResourceLocation),
     functions(*thefunctions),
     visible(!!thevisible),
-    loggingOn(!!theloggingOn),
-    last_time(0.0)
+    loggingOn(!!theloggingOn)
 {
     loggingCategories.clear();
     loggingCategories.insert("FMI");
