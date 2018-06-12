@@ -1,5 +1,4 @@
-OSI Sensor Model Packaging
-==========================
+# OSI Sensor Model Packaging
 
 [![Build Status](https://travis-ci.org/OpenSimulationInterface/osi-sensor-model-packaging.svg?branch=master)](https://travis-ci.org/OpenSimulationInterface/osi-sensor-model-packaging)
 
@@ -362,26 +361,21 @@ model FMU with one input and output and no additional features:
 </fmiModelDescription>
 ```
 
-## TODOs
-
--   Support various raw data streams, like e.g. video streams, or raw
-    reflection lists, in the same vein as the current object list
-    sensor data.  This is likely to be achieved using the same
-    basic mechanism, but including a string constant per input/output
-    indicating the MIME type of the transported data (or some other
-    naming scheme for the type), so that the variables can be
-    identified properly.  Can be merged with the above mechanism for
-    auto configuration, if employed.
-
 ## Future Evolution
 
-In the future an extension to the FMI standard that directly
-supported opaque binary data (e.g. a binary data type that
-is defined in the same way as the current string data type,
-but length terminated instead of zero-terminated) would allow
-migration of sensor models using the current convention to
-one where the sensor data input and output variables could be
-mapped into just one such input and output variable each, of
-the relevant binary type.  The object lifetimes might need to
-be adjusted in such a case to match the FMI standard extension,
-depending on the form that is going to take.
+For FMI 3.0, which is currently in development, an opaque
+binary data type (a binary data type that is defined in the
+same way as the current string data type, but length terminated
+instead of zero-terminated) is planned to be added.  This will
+allow migration of sensor models using the current convention to
+one where the relevant OSMP binary variables will be directly
+mapped to such new binary variables, instead of relying on the
+annotated trio of integer variables for each notional binary
+variable as is currently specified.  The life-time of the new
+FMI 3.0 variables will be the standard life-time of all FMI
+variables, and thus shorter than is currently specified, so
+copying on input and output is going to be required.  Other
+than that the current specification can be mapped 1:1 onto this
+new mechanism, and once FMI 3.0 is released, an updated OSMP
+specification including this option and mapping will be
+released.
