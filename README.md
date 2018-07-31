@@ -188,7 +188,7 @@ following convention is used to define such variables for FMI 2.0:
     The indices MUST start at 1 and MUST be consecutive.  If only one
     sensor view input is needed the prefix MUST be just `OSMPSensorViewIn`.
 
--   Each sensor view input MUST be define as a notional discrete binary
+-   Each sensor view input MUST be defined as a notional discrete binary
     input variable, as specified above, with `causality="input"` and
     `variability="discrete"`.
 
@@ -263,7 +263,7 @@ following convention is used to define such variables for FMI 2.0:
     The indices MUST start at 1 and MUST be consecutive.  If only one
     sensor data output is needed the prefix MUST be just `OSMPSensorDataOut`.
 
--   Each sensor data output MUST be define as a notional discrete binary
+-   Each sensor data output MUST be defined as a notional discrete binary
     output variable, as specified above, with `causality="output"` and
     `variability="discrete"`.
 
@@ -290,6 +290,77 @@ following convention is used to define such variables for FMI 2.0:
     chain FMUs with protocol buffer inputs/outputs in a normal
     simulation engine like e.g. MATLAB/Simulink, and get valid
     results.
+
+## Sensor Data Inputs
+
+-   Sensor data inputs are present in logical models.
+
+-   Sensor data inputs MUST be named with the prefix `OSMPSensorDataIn`.
+    If more than one sensor data input is to be configured, the prefix
+    MUST be extended by an array index designator, i.e. two inputs
+    will use the prefixes `OSMPSensorDataIn[1]` and `OSMPSensorDataIn[2]`.
+    The indices MUST start at 1 and MUST be consecutive.  If only one
+    sensor data input is needed the prefix MUST be just `OSMPSensorDataIn`.
+
+-   Each sensor data input MUST be defined as a notional discrete binary
+    input variable, as specified above, with `causality="input"` and
+    `variability="discrete"`.
+
+-   The MIME type of the variable MUST specify the `type=SensorData`, e.g.
+    `application/x-open-simulation-interface; type=SensorData; version=3.0.0`.
+
+-   The sensor data MUST be encoded as osi::SensorData (see the OSI
+    specification documentation for more details).
+
+-   The guaranteed lifetime of the sensor data protocol buffer pointer
+    provided as input to the FMU MUST be from the time of the call to
+    `fmi2SetInteger` that provides those values until the end of the
+    following `fmi2DoStep` call, i.e. the logical model can rely on the
+    provided buffer remaining valid from the moment it is passed in
+    until the end of the corresponding calculation, and thus does not
+    need to copy the contents in that case (zero copy input).
+
+-   The sensor data passed to the model depends on any prior models
+    or processes that generated the data, i.e. the exact details of
+    the contents will depend on the processing pipeline.
+
+## Sensor View Outputs
+
+-   Sensor view outputs are present in environmental effect models.
+
+-   Sensor view outputs MUST be named with the prefix `OSMPSensorViewOut`.
+    If more than one sensor view output is to be provided, the prefix
+    MUST be extended by an array index designator, i.e. two outputs
+    will use the prefixes `OSMPSensorViewOut[1]` and `OSMPSensorViewOut[2]`.
+    The indices MUST start at 1 and MUST be consecutive.  If only one
+    sensor view output is needed the prefix MUST be just `OSMPSensorViewOut`.
+
+-   Each sensor view output MUST be defined as a notional discrete binary
+    output variable, as specified above, with `causality="output"` and
+    `variability="discrete"`.
+
+-   The MIME type of the variable MUST specify the `type=SensorView`, e.g.
+    `application/x-open-simulation-interface; type=SensorView; version=3.0.0`.
+
+-   The sensor view MUST be encoded as osi::SensorView (see the OSI
+    specification documentation for more details).
+
+-   The guaranteed lifetime of the sensor view protocol buffer pointer
+    provided as output by the FMU MUST be from the end of the call to
+    `fmi2DoStep` that calculated this buffer until the beginning of the
+    **second** `fmi2DoStep` call after that, i.e. the simulation engine
+    can rely on the provided buffer remaining valid from the moment it
+    is passed out until the end of the next Co-Simulation calculation
+    cycle, and thus does not need to copy the contents in that case
+    (zero copy output for the simulation engine, at the cost of double
+    buffering for the environmental effect model).
+
+    This arrangement (and hence the need for double buffering) is
+    required to support use of the environmental effect model FMUs
+    in simulation engines that have no special support for the
+    protocol buffer pointers, i.e. using this convention it is possible
+    to daisy chain FMUs with protocol buffer inputs/outputs in a normal
+    simulation engine like e.g. MATLAB/Simulink, and get valid results.
 
 ## Examples
 
