@@ -2,9 +2,9 @@
 
 [![Build Status](https://travis-ci.org/OpenSimulationInterface/osi-sensor-model-packaging.svg?branch=master)](https://travis-ci.org/OpenSimulationInterface/osi-sensor-model-packaging)
 
-This document specifies the ways in which sensor models, logical models
-and environmental effect models using the [Open Simulation Interface][]
-are to be packaged for use in simulation environments using FMI 2.0.
+This document specifies the ways in which environmental effect models, sensor models
+and logical models using the [Open Simulation Interface][]
+are to be packaged for their use in simulation environments using FMI 2.0.
 
 This is version 1.0.0 of this document. The version number is
 to be interpreted according to the [Semantic Versioning Specification
@@ -23,14 +23,14 @@ document are to be interpreted as described in [RFC 2119][].
 The current specification supports the following kinds of models, that
 can be packaged as FMUs:
 
+-   Environmental effect models, which consume osi::SensorView as input
+    and produce osi::SensorView as output,
+
 -   Sensor models, which consume osi::SensorView as input and generate
-    osi::SensorData as output,
+    osi::SensorData as output, and
 
 -   Logical models, like e.g. sensor fusion models, which consume
-    osi::SensorData as input and produce osi::SensorData as output, and
-
--   Environmental effect models, which consume osi::SensorView as input
-    and produce osi::SensorView as output.
+    osi::SensorData as input and produce osi::SensorData as output.
 
 Additionally complex models that combine various aspects of the model kinds
 above are possible, however configuration and setup of such FMUs will require
@@ -60,7 +60,7 @@ The following basic conventions apply:
 
     where the `osi-version` attribute SHOULD contain the major, minor
     and patch version number of the open simulation interface
-    specification that this model was compiled against.  This is to
+    specification that this model was compiled against. This is to
     ensure that the importing environment can determine which OSI
     version to use prior to communicating with the FMU, which might be
     impossible in cases of major version changes.
@@ -74,7 +74,7 @@ The following basic conventions apply:
 -   The default experiment step size SHOULD be supplied and SHOULD
     indicate the actual model refresh rate (for the input side)
     in seconds, i.e. it is OK for the simulation to only call the
-    FMU fmi2DoStep routine at this implied rate.  If it is not
+    FMU fmi2DoStep routine at this implied rate. If it is not
     supplied the configuration of the model communication rate is
     determined from any input configuration data the model provides
     (see below) or has to be performed manually.
@@ -83,14 +83,14 @@ The following basic conventions apply:
     the model can have additional inputs, outputs, and parameters
     (i.e. all kinds of variables as specified in the FMI 2.0 standard),
     as long as the sensor model can be run correctly with all of those
-    variables left unconnected and at their default values.  The sensor
+    variables left unconnected and at their default values. The sensor
     model MUST NOT rely on other connections (beside the specified data
     connections) being made.
 
-## Definition of binary variables
+## Definition of Binary Variables
 
 In order to support the efficient exchange of binary data, especially
-binary data as provided for by the OSI ProtocolBuffer definitions, the
+binary data as provided for by the OSI [ProtocolBuffer][] definitions, the
 following convention is used to define such variables for FMI 2.0:
 
 -   For a notional binary variable of a name given by `<prefix>`,
@@ -179,6 +179,8 @@ following convention is used to define such variables for FMI 2.0:
     through the actual variables is defined for each kind of variable
     specified below.
 
+[ProtocolBuffer]: https://developers.google.com/protocol-buffers/
+
 ## Sensor View Inputs
 
 -   Sensor view inputs MUST be named with the prefix `OSMPSensorViewIn`.
@@ -254,6 +256,44 @@ following convention is used to define such variables for FMI 2.0:
     configuration using the corresponding `OSMPSensorViewInConfig` parameter
     before exiting initialization mode.
 
+## Sensor View Outputs
+
+-   Sensor view outputs are present in environmental effect models.
+
+-   Sensor view outputs MUST be named with the prefix `OSMPSensorViewOut`.
+    If more than one sensor view output is to be provided, the prefix
+    MUST be extended by an array index designator, i.e. two outputs
+    will use the prefixes `OSMPSensorViewOut[1]` and `OSMPSensorViewOut[2]`.
+    The indices MUST start at 1 and MUST be consecutive.  If only one
+    sensor view output is needed the prefix MUST be just `OSMPSensorViewOut`.
+
+-   Each sensor view output MUST be defined as a notional discrete binary
+    output variable, as specified above, with `causality="output"` and
+    `variability="discrete"`.
+
+-   The MIME type of the variable MUST specify the `type=SensorView`, e.g.
+    `application/x-open-simulation-interface; type=SensorView; version=3.0.0`.
+
+-   The sensor view MUST be encoded as osi::SensorView (see the OSI
+    specification documentation for more details).
+
+-   The guaranteed lifetime of the sensor view protocol buffer pointer
+    provided as output by the FMU MUST be from the end of the call to
+    `fmi2DoStep` that calculated this buffer until the beginning of the
+    **second** `fmi2DoStep` call after that, i.e. the simulation engine
+    can rely on the provided buffer remaining valid from the moment it
+    is passed out until the end of the next Co-Simulation calculation
+    cycle, and thus does not need to copy the contents in that case
+    (zero copy output for the simulation engine, at the cost of double
+    buffering for the environmental effect model).
+
+    This arrangement (and hence the need for double buffering) is
+    required to support use of the environmental effect model FMUs
+    in simulation engines that have no special support for the
+    protocol buffer pointers, i.e. using this convention it is possible
+    to daisy chain FMUs with protocol buffer inputs/outputs in a normal
+    simulation engine like e.g. MATLAB/Simulink, and get valid results.
+
 ## Sensor Data Outputs
 
 -   Sensor data outputs MUST be named with the prefix `OSMPSensorDataOut`.
@@ -324,49 +364,11 @@ following convention is used to define such variables for FMI 2.0:
     or processes that generated the data, i.e. the exact details of
     the contents will depend on the processing pipeline.
 
-## Sensor View Outputs
-
--   Sensor view outputs are present in environmental effect models.
-
--   Sensor view outputs MUST be named with the prefix `OSMPSensorViewOut`.
-    If more than one sensor view output is to be provided, the prefix
-    MUST be extended by an array index designator, i.e. two outputs
-    will use the prefixes `OSMPSensorViewOut[1]` and `OSMPSensorViewOut[2]`.
-    The indices MUST start at 1 and MUST be consecutive.  If only one
-    sensor view output is needed the prefix MUST be just `OSMPSensorViewOut`.
-
--   Each sensor view output MUST be defined as a notional discrete binary
-    output variable, as specified above, with `causality="output"` and
-    `variability="discrete"`.
-
--   The MIME type of the variable MUST specify the `type=SensorView`, e.g.
-    `application/x-open-simulation-interface; type=SensorView; version=3.0.0`.
-
--   The sensor view MUST be encoded as osi::SensorView (see the OSI
-    specification documentation for more details).
-
--   The guaranteed lifetime of the sensor view protocol buffer pointer
-    provided as output by the FMU MUST be from the end of the call to
-    `fmi2DoStep` that calculated this buffer until the beginning of the
-    **second** `fmi2DoStep` call after that, i.e. the simulation engine
-    can rely on the provided buffer remaining valid from the moment it
-    is passed out until the end of the next Co-Simulation calculation
-    cycle, and thus does not need to copy the contents in that case
-    (zero copy output for the simulation engine, at the cost of double
-    buffering for the environmental effect model).
-
-    This arrangement (and hence the need for double buffering) is
-    required to support use of the environmental effect model FMUs
-    in simulation engines that have no special support for the
-    protocol buffer pointers, i.e. using this convention it is possible
-    to daisy chain FMUs with protocol buffer inputs/outputs in a normal
-    simulation engine like e.g. MATLAB/Simulink, and get valid results.
-
 ## Examples
 
 An example dummy sensor model implementation is provided in the
 OSMPDummySensor sub-directory of the examples directory of this
-repository.  Below you can find an example modelDescription.xml
+repository. Below you can find an example modelDescription.xml
 file that would satisfy the requirements of this document for a sensor
 model FMU with one input and output and no additional features:
 
@@ -437,15 +439,15 @@ model FMU with one input and output and no additional features:
 For FMI 3.0, which is currently in development, an opaque
 binary data type (a binary data type that is defined in the
 same way as the current string data type, but length terminated
-instead of zero-terminated) is planned to be added.  This will
+instead of zero-terminated) is planned to be added. This will
 allow migration of sensor models using the current convention to
 one where the relevant OSMP binary variables will be directly
 mapped to such new binary variables, instead of relying on the
 annotated trio of integer variables for each notional binary
-variable as is currently specified.  The life-time of the new
+variable as is currently specified. The life-time of the new
 FMI 3.0 variables will be the standard life-time of all FMI
 variables, and thus shorter than is currently specified, so
-copying on input and output is going to be required.  Other
+copying on input and output is going to be required. Other
 than that the current specification can be mapped 1:1 onto this
 new mechanism, and once FMI 3.0 is released, an updated OSMP
 specification including this option and mapping will be
