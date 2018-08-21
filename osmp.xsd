@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"
+    targetNamespace="http://xsd.pmsf.net/OSISensorModelPackaging" elementFormDefault="qualified"
+    vc:minVersion="1.0" vc:maxVersion="1.1">
+    <xs:element name="osmp">
+        <xs:complexType>
+            <xs:attribute name="version" type="xs:string" use="required" fixed="1.0.0"/>
+            <xs:attribute name="osi-version" type="xs:string" use="optional"/>
+        </xs:complexType>
+    </xs:element>
+    
+    <xs:element name="osmp-binary-variable">
+        <xs:complexType>
+            <xs:attribute name="name" type="xs:string" use="required"/>
+            <xs:attribute name="role" use="required">
+                <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                        <xs:enumeration value="base.lo"/>
+                        <xs:enumeration value="base.hi"/>
+                        <xs:enumeration value="size"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:attribute>
+            <xs:attribute name="mime-type" type="xs:string" use="optional" default="application/octet-stream"/>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>
