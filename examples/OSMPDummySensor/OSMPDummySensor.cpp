@@ -309,9 +309,9 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
                         obj->mutable_header()->set_existence_probability(cos((2.0*distance-actual_range)/actual_range));
                         obj->mutable_header()->set_measurement_state(osi3::DetectedItemHeader_MeasurementState_MEASUREMENT_STATE_MEASURED);
                         obj->mutable_header()->add_sensor_id()->CopyFrom(currentIn.sensor_id());
-                        obj->mutable_base()->mutable_position()->set_x(veh.base().position().x());
-                        obj->mutable_base()->mutable_position()->set_y(veh.base().position().y());
-                        obj->mutable_base()->mutable_position()->set_z(veh.base().position().z());
+                        obj->mutable_base()->mutable_position()->set_x(rel_x);
+                        obj->mutable_base()->mutable_position()->set_y(rel_y);
+                        obj->mutable_base()->mutable_position()->set_z(rel_z);
                         obj->mutable_base()->mutable_dimension()->set_length(veh.base().dimension().length());
                         obj->mutable_base()->mutable_dimension()->set_width(veh.base().dimension().width());
                         obj->mutable_base()->mutable_dimension()->set_height(veh.base().dimension().height());
