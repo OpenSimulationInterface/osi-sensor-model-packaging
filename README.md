@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/OpenSimulationInterface/osi-sensor-model-packaging.svg?branch=master)](https://travis-ci.org/OpenSimulationInterface/osi-sensor-model-packaging)
 
-OSI Sensor Model Packaging specifies ways in which environmental effect models, sensor models and logical models using the [Open Simulation Interface (OSI)][] are to be packaged for their use in simulation environments using FMI 2.0. For more detailed information see the [official documentation](https://opensimulationinterface.github.io/osi-documentation/osi-model-packaging/README.html).
+OSI Sensor Model Packaging specifies ways in which environmental effect models, sensor models and logical models using the [Open Simulation Interface (OSI)][] are to be packaged for their use in simulation environments using FMI 2.0. For more detailed information see the [official documentation](https://opensimulationinterface.github.io/osi-documentation/osi-sensor-model-packaging/README.html).
 
 [Open Simulation Interface (OSI)]: https://github.com/OpenSimulationInterface/open-simulation-interface
 
