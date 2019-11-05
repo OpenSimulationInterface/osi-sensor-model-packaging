@@ -6,7 +6,7 @@ sensor models and logical models using the `Open Simulation Interface`_
 are to be packaged for their use in simulation environments using FMI
 2.0.
 
-This is version 1.0.0 of this document. The version number is to be
+This is version 1.1.0 of this document. The version number is to be
 interpreted according to the `Semantic Versioning Specification (SemVer)
 2.0.0`_.
 
@@ -28,6 +28,14 @@ can be packaged as FMUs:
 
 -  Logical models, like e.g. sensor fusion models, which consume
    ``osi::SensorData`` as input and produce ``osi::SensorData`` as output.
+
+-  Traffic Participant models, which consume ``osi::SensorView`` as input
+   and generate ``osi::TrafficUpdate`` as output.  These models can
+   internally use e.g. Environmental effect, Sensor and/or Logical models
+   as part of a modeled autonomous vehicle, but they can also be used to
+   implement surrounding traffic in simplified ways.  Optionally traffic
+   participant models can consume ``osi::TrafficCommand`` as input, to
+   allow control by a scenario engine as part of the simulation.
 
 Additionally complex models that combine various aspects of the model
 kinds above are possible, however configuration and setup of such FMUs
@@ -78,10 +86,9 @@ The following basic conventions apply:
 -  Besides the model parameters, inputs and outputs specified below the
    model can have additional inputs, outputs, and parameters (i.e. all
    kinds of variables as specified in the FMI 2.0 standard), as long as
-   the sensor model can be run correctly with all of those variables
-   left unconnected and at their default values. The sensor model MUST
-   NOT rely on other connections (beside the specified data connections)
-   being made.
+   the model can be run correctly with all of those variables left
+   unconnected and at their default values. The model MUST NOT rely on
+   other connections (beside the specified data connections) being made.
 
 Definition of Binary Variables
 ------------------------------
@@ -374,6 +381,81 @@ Sensor Data Inputs
 -  The sensor data passed to the model depends on any prior models or
    processes that generated the data, i.e. the exact details of the
    contents will depend on the processing pipeline.
+
+Traffic Update Outputs
+----------------------
+
+-  Traffic update outputs MUST be named with the prefix
+   ``OSMPTrafficUpdateOut``. If more than one traffic update output is
+   to be provided, the prefix MUST be extended by an array index
+   designator, i.e. two outputs will use the prefixes
+   ``OSMPTrafficUpdateOut[1]`` and ``OSMPTrafficUpdateOut[2]``. The
+   indices MUST start at 1 and MUST be consecutive. If only one traffic
+   update output is needed the prefix MUST be just
+   ``OSMPTrafficUpdateOut``.
+
+-  Each traffic update output MUST be defined as a notional discrete
+   binary output variable, as specified above, with
+   ``causality="output"`` and ``variability="discrete"``.
+
+-  The MIME type of the variable MUST specify the ``type=TrafficUpdate``,
+   e.g.
+   ``application/x-open-simulation-interface; type=TrafficUpdate; version=3.0.0``.
+
+-  The traffic update MUST be encoded as ``osi::TrafficUpdate`` (see the
+   OSI specification documentation for more details).
+
+-  The guaranteed lifetime of the traffic update protocol buffer pointer
+   provided as output by the FMU MUST be from the end of the call to
+   ``fmi2DoStep`` that calculated this buffer until the beginning of the
+   **second** ``fmi2DoStep`` call after that, i.e. the simulation engine
+   can rely on the provided buffer remaining valid from the moment it is
+   passed out until the end of the next Co-Simulation calculation cycle,
+   and thus does not need to copy the contents in that case (zero copy
+   output for the simulation engine, at the cost of double buffering for
+   the model).
+
+   This arrangement (and hence the need for double buffering) is
+   required to support use of the model FMUs in simulation
+   engines that have no special support for the protocol buffer
+   pointers, i.e. using this convention it is possible to daisy chain
+   FMUs with protocol buffer inputs/outputs in a normal simulation
+   engine like e.g. MATLAB/Simulink, and get valid results.
+
+Traffic Command Inputs
+----------------------
+
+-  Traffic command inputs are optionally present in traffic participant
+   models, in order to allow control of some parts of the traffic
+   participant behavior by scenario engines.
+
+-  Traffic command inputs MUST be named with the prefix
+   ``OSMPTrafficCommandIn``. If more than one traffic command input is
+   to be configured, the prefix MUST be extended by an array index
+   designator, i.e. two inputs will use the prefixes
+   ``OSMPTrafficCommandIn[1]`` and ``OSMPTrafficCommandIn[2]``. The
+   indices MUST start at 1 and MUST be consecutive. If only one traffic
+   command input is needed the prefix MUST be just
+   ``OSMPTrafficCommandIn``.
+
+-  Each traffic command input MUST be defined as a notional discrete
+   binary input variable, as specified above, with ``causality="input"``
+   and ``variability="discrete"``.
+
+-  The MIME type of the variable MUST specify the ``type=TrafficCommand``,
+   e.g.
+   ``application/x-open-simulation-interface; type=TrafficCommand; version=3.0.0``.
+
+-  The traffic command MUST be encoded as ``osi::TrafficCommand`` (see
+   the OSI specification documentation for more details).
+
+-  The guaranteed lifetime of the traffic command protocol buffer pointer
+   provided as input to the FMU MUST be from the time of the call to
+   ``fmi2SetInteger`` that provides those values until the end of the
+   following ``fmi2DoStep`` call, i.e. the model can rely on the provided
+   buffer remaining valid from the moment it is passed in until the end
+   of the corresponding calculation, and thus does not need to copy the
+   contents in that case (zero copy input).
 
 Examples
 --------
