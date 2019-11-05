@@ -1,5 +1,5 @@
-General Description
-==========================
+OSI Sensor Model Packaging Specification
+========================================
 
 This document specifies the ways in which environmental effect models,
 sensor models and logical models using the `Open Simulation Interface`_
@@ -469,6 +469,3 @@ released.
 .. _RFC 2119: https://www.ietf.org/rfc/rfc2119.txt
 .. _FMI: https://fmi-standard.org/
 .. _FMI 2.0 standard: https://svn.modelica.org/fmi/branches/public/specifications/v2.0/FMI_for_ModelExchange_and_CoSimulation_v2.0.pdf
-
-.. |Build Status| image:: https://travis-ci.org/OpenSimulationInterface/osi-sensor-model-packaging.svg?branch=master
-   :target: https://travis-ci.org/OpenSimulationInterface/osi-sensor-model-packaging
