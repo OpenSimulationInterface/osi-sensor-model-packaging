@@ -36,6 +36,8 @@ can be packaged as FMUs:
    implement surrounding traffic in simplified ways.  Optionally traffic
    participant models can consume ``osi::TrafficCommand`` as input, to
    allow control by a scenario engine as part of the simulation.
+   Traffic Participant models consume a global ``osi::GroundTruth`` during
+   initialization.
 
 Additionally complex models that combine various aspects of the model
 kinds above are possible, however configuration and setup of such FMUs
@@ -381,6 +383,45 @@ Sensor Data Inputs
 -  The sensor data passed to the model depends on any prior models or
    processes that generated the data, i.e. the exact details of the
    contents will depend on the processing pipeline.
+
+Traffic Participant Initialization
+----------------------------------
+
+- Traffic Participant models consume at least one initialization parameter.
+  The initialization parameters MUST be set by the environment before calling
+  ``fmi2EnterInitializationMode``.
+
+- The first parameter MUST be named ``OSMPGroundTruthInit``. Its purpose is to
+  provide the Traffic Participant model with a view of the static environment,
+  in the OSI format.
+
+-  ``OSMPGroundTruthInit`` MUST be defined as a notional discrete binary
+   input variable, as specified above, with ``causality="parameter"``,
+   ``variability="fixed"`` and ``initial="exact"``.
+
+-  The MIME type of the variable MUST specify the ``type=GroundTruth``, e.g.
+   ``application/x-open-simulation-interface; type=GroundTruth; version=3.0.0``.
+
+- ``OSMPGroundTruthInit`` MUST be encoded as ``osi::GroundTruth`` (see the OSI
+  specification documentation for more details).
+
+- ``OSMPGroundTruthInit`` MUST contain all static data (e.g. roads) encountered
+  by the model during a simulation run. It MAY NOT contain any dynamic data
+  (e.g. vehicles).
+
+- The Ids of objects in ``OSMPGroundTruthInit`` MUST be identical to the Ids of
+  the same objects contained in later ``OSMPSensorDataIn`` objects.
+
+- If the model is instantiated multiple times, then all instantiations MUST
+  receive the exact same content stored in the ``OSMPGroundTruthInit``
+  parameter. This allows a model to do expensive map calculations only once
+  during initialization, and to share the calculated data between multiple
+  instantiations.
+
+-  The guaranteed lifetime of the ground truh protocol buffer pointer
+   provided as input to the FMU MUST be from the time of the call to
+   ``fmi2SetInteger`` that provides those values until the end of the
+   simulation.
 
 Traffic Update Outputs
 ----------------------
