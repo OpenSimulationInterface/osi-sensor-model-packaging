@@ -388,8 +388,6 @@ Traffic Participant Initialization
 ----------------------------------
 
 - Traffic Participant models consume at least one initialization parameter.
-  The initialization parameters MUST be set by the environment before calling
-  ``fmi2EnterInitializationMode``.
 
 - The first parameter MUST be named ``OSMPGroundTruthInit``. Its purpose is to
   provide the Traffic Participant model with a view of the static environment,
@@ -400,7 +398,7 @@ Traffic Participant Initialization
    ``variability="fixed"`` and ``initial="exact"``.
 
 -  The MIME type of the variable MUST specify the ``type=GroundTruth``, e.g.
-   ``application/x-open-simulation-interface; type=GroundTruth; version=3.0.0``.
+   ``application/x-open-simulation-interface; type=GroundTruth; version=3.2.0``.
 
 - ``OSMPGroundTruthInit`` MUST be encoded as ``osi::GroundTruth`` (see the OSI
   specification documentation for more details).
@@ -412,16 +410,16 @@ Traffic Participant Initialization
 - The Ids of objects in ``OSMPGroundTruthInit`` MUST be identical to the Ids of
   the same objects contained in later ``OSMPSensorDataIn`` objects.
 
-- If the model is instantiated multiple times, then all instantiations MUST
+- If the model is instantiated multiple times, then all instantiations SHOULD
   receive the exact same content stored in the ``OSMPGroundTruthInit``
   parameter. This allows a model to do expensive map calculations only once
   during initialization, and to share the calculated data between multiple
   instantiations.
 
--  The guaranteed lifetime of the ground truh protocol buffer pointer
+-  The guaranteed lifetime of the ground truth protocol buffer pointer
    provided as input to the FMU MUST be from the time of the call to
-   ``fmi2SetInteger`` that provides those values until the end of the
-   simulation.
+   ``fmi2SetInteger`` that provides those values until the end of the following
+   ``fmi2ExitInitializationMode`` call.
 
 Traffic Update Outputs
 ----------------------
