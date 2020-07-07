@@ -36,8 +36,8 @@ can be packaged as FMUs:
    implement surrounding traffic in simplified ways.  Optionally traffic
    participant models can consume ``osi::TrafficCommand`` as input, to
    allow control by a scenario engine as part of the simulation.
-   Traffic Participant models consume a global ``osi::GroundTruth`` during
-   initialization.
+   Traffic Participant models can consume a global ``osi::GroundTruth``
+   during initialization.
 
 Additionally complex models that combine various aspects of the model
 kinds above are possible, however configuration and setup of such FMUs
@@ -387,11 +387,13 @@ Sensor Data Inputs
 Traffic Participant Initialization
 ----------------------------------
 
-- Traffic Participant models consume at least one initialization parameter.
+- Traffic Participant models CAN consume an ``osi::GroundTruth`` as an
+  initialization parameter.
 
-- The first parameter MUST be named ``OSMPGroundTruthInit``. Its purpose is to
-  provide the Traffic Participant model with a view of the static environment,
-  in the OSI format.
+- If the traffic participant needs a ground truth during initialization, it
+  MUST have a parameter named ``OSMPGroundTruthInit``. Its purpose is to
+  provide the Traffic Participant model with a view of the static environment
+  (i.e. the map), in the OSI format.
 
 -  ``OSMPGroundTruthInit`` MUST be defined as a notional discrete binary
    input variable, as specified above, with ``causality="parameter"``,
@@ -408,7 +410,7 @@ Traffic Participant Initialization
   (e.g. vehicles).
 
 - The Ids of objects in ``OSMPGroundTruthInit`` MUST be identical to the Ids of
-  the same objects contained in later ``OSMPSensorDataIn`` objects.
+  the same objects contained in later ``OSMPSensorViewIn`` input.
 
 - If the model is instantiated multiple times, then all instantiations SHOULD
   receive the exact same content stored in the ``OSMPGroundTruthInit``
