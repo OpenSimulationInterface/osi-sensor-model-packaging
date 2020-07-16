@@ -36,8 +36,9 @@ can be packaged as FMUs:
    implement surrounding traffic in simplified ways.  Optionally traffic
    participant models can consume ``osi::TrafficCommand`` as input, to
    allow control by a scenario engine as part of the simulation.
-   Traffic Participant models can consume a global ``osi::GroundTruth``
-   during initialization.
+
+All models can optionally also consume a global ``osi::GroundTruth``
+during initialization.
 
 Additionally complex models that combine various aspects of the model
 kinds above are possible, however configuration and setup of such FMUs
@@ -384,20 +385,20 @@ Sensor Data Inputs
    processes that generated the data, i.e. the exact details of the
    contents will depend on the processing pipeline.
 
-Traffic Participant Initialization
-----------------------------------
+GroundTruth Initialization Parameters
+-------------------------------------
 
-- Traffic Participant models CAN consume an ``osi::GroundTruth`` as an
+- All models CAN optionally consume an ``osi::GroundTruth`` as an
   initialization parameter.
 
-- If the traffic participant needs a ground truth during initialization, it
-  MUST have a parameter named ``OSMPGroundTruthInit``. Its purpose is to
-  provide the Traffic Participant model with a view of the static environment
-  (i.e. the map), in the OSI format.
+- If a model needs a ground truth during initialization, it MUST have
+  a parameter named ``OSMPGroundTruthInit``. Its purpose is to provide
+  the model with a view of the static environment (i.e. the map), in
+  OSI format.
 
 -  ``OSMPGroundTruthInit`` MUST be defined as a notional discrete binary
-   input variable, as specified above, with ``causality="parameter"``,
-   ``variability="fixed"`` and ``initial="exact"``.
+   input parameter variable, as specified above, with
+   ``causality="parameter"``, ``variability="fixed"`` and ``initial="exact"``.
 
 -  The MIME type of the variable MUST specify the ``type=GroundTruth``, e.g.
    ``application/x-open-simulation-interface; type=GroundTruth; version=3.2.0``.
@@ -410,7 +411,7 @@ Traffic Participant Initialization
   it contains MUST NOT be used and has no specified semantics.
 
 - The Ids of objects in ``OSMPGroundTruthInit`` MUST be identical to the Ids of
-  the same objects contained in later ``OSMPSensorViewIn`` input.
+  the same objects contained in later ``OSMPSensorViewIn`` or other input data.
 
 - If the model is instantiated multiple times, then all instantiations SHOULD
   receive the exact same content stored in the ``OSMPGroundTruthInit``
