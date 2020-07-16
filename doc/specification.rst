@@ -406,8 +406,8 @@ Traffic Participant Initialization
   specification documentation for more details).
 
 - ``OSMPGroundTruthInit`` MUST contain all static data (e.g. roads) encountered
-  by the model during a simulation run. It MAY NOT contain any dynamic data
-  (e.g. vehicles).
+  by the model during a simulation run. Any dynamic data (e.g. MovingObjects)
+  it contains MUST NOT be used and has no specified semantics.
 
 - The Ids of objects in ``OSMPGroundTruthInit`` MUST be identical to the Ids of
   the same objects contained in later ``OSMPSensorViewIn`` input.
