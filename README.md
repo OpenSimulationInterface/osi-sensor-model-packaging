@@ -1,5 +1,13 @@
 # OSI Sensor Model Packaging
 
+The OSI Sensor Model Packaging specification documents the way in which sensor models using the Open Simulation Interface are to be packaged for use in simulation environments using FMI 2.0.
+
+This repository includes the specification document as well as example FMUs that demonstrate the proper packaging.
+
+See http://fmi-standard.org/ for more information about FMI itself. There's also a small introductory movie that gives an overview of the role of FMI in cooperate simulation projects:
+
+TODO: Add link to video
+
 [![Build Status](https://travis-ci.com/OpenSimulationInterface/osi-sensor-model-packaging.svg?branch=master)](https://travis-ci.com/OpenSimulationInterface/osi-sensor-model-packaging)
 
 OSI Sensor Model Packaging specifies ways in which models (like e.g. environmental effect models, sensor models and logical models) using the [Open Simulation Interface (OSI)][] are to be packaged for their use in simulation environments using FMI 2.0.
@@ -9,6 +17,8 @@ For more detailed information see the [official documentation](https://opensimul
 
 [Open Simulation Interface (OSI)]: https://github.com/OpenSimulationInterface/open-simulation-interface
 
+
+
 ## Usage
 The examples in the directory [`examples`](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging/tree/master/examples) of this repository can be built using CMake. They require that the open-simulation-interface submodule of the repository is populated.
 
@@ -17,6 +27,8 @@ The [`OSMPDummySource`](https://github.com/OpenSimulationInterface/osi-sensor-mo
 The [`OSMPCNetworkProxy`](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging/tree/master/examples/OSMPCNetworkProxy) example demonstrates a simple C network proxy that can send and receive OSI data via TCP sockets.
 
 The [`OSMPDummySensor`](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging/tree/master/examples/OSMPDummySensor) example can be used as a simple dummy sensor model, demonstrating the use of OSI for sensor models consuming SensorView data and generating SensorData output.
+
+
 
 ## Installation
 ##### Dependencies
