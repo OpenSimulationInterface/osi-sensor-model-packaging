@@ -2,9 +2,9 @@ OSI Sensor Model Packaging Specification
 ========================================
 
 This document specifies the ways in which environmental effect models,
-sensor models and logical models using the `Open Simulation Interface`_
-are to be packaged for their use in simulation environments using FMI
-2.0.
+sensor models, logical models and traffic participant models using the
+`Open Simulation Interface`_ are to be packaged for their use in simulation 
+environments using FMI 2.0.
 
 This is version 1.1.0 of this document. The version number is to be
 interpreted according to the `Semantic Versioning Specification (SemVer)
@@ -24,7 +24,7 @@ can be packaged as FMUs:
    and produce ``osi::SensorView`` as output,
 
 -  Sensor models, which consume ``osi::SensorView`` as input and generate
-   ``osi::SensorData`` as output, and
+   ``osi::SensorData`` as output, 
 
 -  Logical models, like e.g. sensor fusion models, which consume
    ``osi::SensorData`` as input and produce ``osi::SensorData`` as output.
@@ -33,7 +33,7 @@ can be packaged as FMUs:
    and generate ``osi::TrafficUpdate`` as output.  These models can
    internally use e.g. Environmental effect, Sensor and/or Logical models
    as part of a modeled autonomous vehicle, but they can also be used to
-   implement surrounding traffic in simplified ways.  Optionally traffic
+   implement surrounding traffic in simplified ways.  Optionally, traffic
    participant models can consume ``osi::TrafficCommand`` as input, to
    allow control by a scenario engine as part of the simulation.
 
@@ -401,7 +401,7 @@ GroundTruth Initialization Parameters
    ``causality="parameter"``, ``variability="fixed"`` and ``initial="exact"``.
 
 -  The MIME type of the variable MUST specify the ``type=GroundTruth``, e.g.
-   ``application/x-open-simulation-interface; type=GroundTruth; version=3.2.0``.
+   ``application/x-open-simulation-interface; type=GroundTruth; version=3.3.0``.
 
 - ``OSMPGroundTruthInit`` MUST be encoded as ``osi::GroundTruth`` (see the OSI
   specification documentation for more details).
@@ -442,7 +442,7 @@ Traffic Update Outputs
 
 -  The MIME type of the variable MUST specify the ``type=TrafficUpdate``,
    e.g.
-   ``application/x-open-simulation-interface; type=TrafficUpdate; version=3.0.0``.
+   ``application/x-open-simulation-interface; type=TrafficUpdate; version=3.3.0``.
 
 -  The traffic update MUST be encoded as ``osi::TrafficUpdate`` (see the
    OSI specification documentation for more details).
@@ -486,7 +486,7 @@ Traffic Command Inputs
 
 -  The MIME type of the variable MUST specify the ``type=TrafficCommand``,
    e.g.
-   ``application/x-open-simulation-interface; type=TrafficCommand; version=3.0.0``.
+   ``application/x-open-simulation-interface; type=TrafficCommand; version=3.3.0``.
 
 -  The traffic command MUST be encoded as ``osi::TrafficCommand`` (see
    the OSI specification documentation for more details).
