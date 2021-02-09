@@ -392,11 +392,11 @@ fmi2Status COSMPDummySensor::SetDebugLogging(fmi2Boolean theloggingOn, size_t nC
     if (categories && (nCategories > 0)) {
         loggingCategories.clear();
         for (size_t i=0;i<nCategories;i++) {
-            if (categories[i] == "FMI")
+            if (0==strcmp(categories[i],"FMI"))
                 loggingCategories.insert("FMI");
-            else if (categories[i] == "OSMP")
+            else if (0==strcmp(categories[i],"OSMP"))
                 loggingCategories.insert("OSMP");
-            else if (categories[i] == "OSI")
+            else if (0==strcmp(categories[i],"OSI"))
                 loggingCategories.insert("OSI");
         }
     } else {
