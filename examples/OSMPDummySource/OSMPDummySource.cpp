@@ -183,7 +183,7 @@ void rotatePoint(double x, double y, double z,double yaw,double pitch,double rol
     rz = matrix[2][0] * x + matrix[2][1] * y + matrix[2][2] * z;
 }
 
-fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
+fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint)
 {
     DEBUGBREAK();
 
