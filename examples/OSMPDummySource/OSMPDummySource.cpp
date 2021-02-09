@@ -102,10 +102,10 @@ void encode_pointer_to_integer(const void* ptr,fmi2Integer& hi,fmi2Integer& lo)
 
 void COSMPDummySource::set_fmi_sensor_view_out(const osi3::SensorView& data)
 {
-    data.SerializeToString(&currentBuffer);
-    encode_pointer_to_integer(currentBuffer.data(),integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX]);
-    integer_vars[FMI_INTEGER_SENSORVIEW_OUT_SIZE_IDX]=(fmi2Integer)currentBuffer.length();
-    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX],currentBuffer.data());
+    data.SerializeToString(currentBuffer);
+    encode_pointer_to_integer(currentBuffer->data(),integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX]);
+    integer_vars[FMI_INTEGER_SENSORVIEW_OUT_SIZE_IDX]=(fmi2Integer)currentBuffer->length();
+    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX],currentBuffer->data());
     swap(currentBuffer,lastBuffer);
 }
 
@@ -280,6 +280,8 @@ COSMPDummySource::COSMPDummySource(fmi2String theinstanceName, fmi2Type thefmuTy
     visible(!!thevisible),
     loggingOn(!!theloggingOn)
 {
+    currentBuffer = new string();
+    lastBuffer = new string();
     loggingCategories.clear();
     loggingCategories.insert("FMI");
     loggingCategories.insert("OSMP");
@@ -288,9 +290,9 @@ COSMPDummySource::COSMPDummySource(fmi2String theinstanceName, fmi2Type thefmuTy
 
 COSMPDummySource::~COSMPDummySource()
 {
-
+    delete currentBuffer;
+    delete lastBuffer;
 }
-
 
 fmi2Status COSMPDummySource::SetDebugLogging(fmi2Boolean theloggingOn, size_t nCategories, const fmi2String categories[])
 {

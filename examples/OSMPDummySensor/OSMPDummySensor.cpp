@@ -114,10 +114,10 @@ bool COSMPDummySensor::get_fmi_sensor_view_config(osi3::SensorViewConfiguration&
 
 void COSMPDummySensor::set_fmi_sensor_view_config_request(const osi3::SensorViewConfiguration& data)
 {
-    data.SerializeToString(&currentConfigRequestBuffer);
-    encode_pointer_to_integer(currentConfigRequestBuffer.data(),integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX]);
-    integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_SIZE_IDX]=(fmi2Integer)currentConfigRequestBuffer.length();
-    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX],currentConfigRequestBuffer.data());
+    data.SerializeToString(currentConfigRequestBuffer);
+    encode_pointer_to_integer(currentConfigRequestBuffer->data(),integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX]);
+    integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_SIZE_IDX]=(fmi2Integer)currentConfigRequestBuffer->length();
+    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX],currentConfigRequestBuffer->data());
     swap(currentConfigRequestBuffer,lastConfigRequestBuffer);
 }
 
@@ -142,10 +142,10 @@ bool COSMPDummySensor::get_fmi_sensor_view_in(osi3::SensorView& data)
 
 void COSMPDummySensor::set_fmi_sensor_data_out(const osi3::SensorData& data)
 {
-    data.SerializeToString(&currentOutputBuffer);
-    encode_pointer_to_integer(currentOutputBuffer.data(),integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX]);
-    integer_vars[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX]=(fmi2Integer)currentOutputBuffer.length();
-    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX],currentOutputBuffer.data());
+    data.SerializeToString(currentOutputBuffer);
+    encode_pointer_to_integer(currentOutputBuffer->data(),integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX]);
+    integer_vars[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX]=(fmi2Integer)currentOutputBuffer->length();
+    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX],currentOutputBuffer->data());
     swap(currentOutputBuffer,lastOutputBuffer);
 }
 
@@ -373,6 +373,10 @@ COSMPDummySensor::COSMPDummySensor(fmi2String theinstanceName, fmi2Type thefmuTy
     loggingOn(!!theloggingOn),
     simulation_started(false)
 {
+    currentOutputBuffer=new string();
+    lastOutputBuffer=new string();
+    currentConfigRequestBuffer=new string();
+    lastConfigRequestBuffer=new string();
     loggingCategories.clear();
     loggingCategories.insert("FMI");
     loggingCategories.insert("OSMP");
@@ -381,9 +385,11 @@ COSMPDummySensor::COSMPDummySensor(fmi2String theinstanceName, fmi2Type thefmuTy
 
 COSMPDummySensor::~COSMPDummySensor()
 {
-
+    delete currentOutputBuffer;
+    delete lastOutputBuffer;
+    delete currentConfigRequestBuffer;
+    delete lastConfigRequestBuffer;
 }
-
 
 fmi2Status COSMPDummySensor::SetDebugLogging(fmi2Boolean theloggingOn, size_t nCategories, const fmi2String categories[])
 {
