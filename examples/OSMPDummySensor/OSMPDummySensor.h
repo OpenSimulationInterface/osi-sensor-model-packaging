@@ -202,10 +202,10 @@ protected:
     fmi2Real real_vars[FMI_REAL_VARS];
     string string_vars[FMI_STRING_VARS];
     bool simulation_started;
-    string currentOutputBuffer;
-    string lastOutputBuffer;
-    string currentConfigRequestBuffer;
-    string lastConfigRequestBuffer;
+    string* currentOutputBuffer;
+    string* lastOutputBuffer;
+    string* currentConfigRequestBuffer;
+    string* lastConfigRequestBuffer;
 
     /* Simple Accessors */
     fmi2Boolean fmi_valid() { return boolean_vars[FMI_BOOLEAN_VALID_IDX]; }
