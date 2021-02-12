@@ -5,7 +5,7 @@
     vc:minVersion="1.0" vc:maxVersion="1.1">
     <xs:element name="osmp">
         <xs:complexType>
-            <xs:attribute name="version" type="xs:string" use="required" fixed="1.0.0"/>
+            <xs:attribute name="version" type="xs:string" use="required" fixed="1.1.0"/>
             <xs:attribute name="osi-version" type="xs:string" use="optional"/>
         </xs:complexType>
     </xs:element>

@@ -20,24 +20,24 @@ Kinds of Models
 The current specification supports the following kinds of models, that
 can be packaged as FMUs:
 
--  Environmental effect models, which consume ``osi::SensorView`` as input
-   and produce ``osi::SensorView`` as output,
+-  Environmental effect models, which consume ``osi3::SensorView`` as input
+   and produce ``osi3::SensorView`` as output,
 
--  Sensor models, which consume ``osi::SensorView`` as input and generate
-   ``osi::SensorData`` as output, 
+-  Sensor models, which consume ``osi3::SensorView`` as input and generate
+   ``osi3::SensorData`` as output, 
 
 -  Logical models, like e.g. sensor fusion models, which consume
-   ``osi::SensorData`` as input and produce ``osi::SensorData`` as output.
+   ``osi3::SensorData`` as input and produce ``osi3::SensorData`` as output.
 
--  Traffic Participant models, which consume ``osi::SensorView`` as input
-   and generate ``osi::TrafficUpdate`` as output.  These models can
+-  Traffic Participant models, which consume ``osi3::SensorView`` as input
+   and generate ``osi3::TrafficUpdate`` as output.  These models can
    internally use e.g. Environmental effect, Sensor and/or Logical models
    as part of a modeled autonomous vehicle, but they can also be used to
    implement surrounding traffic in simplified ways.  Optionally, traffic
-   participant models can consume ``osi::TrafficCommand`` as input, to
+   participant models can consume ``osi3::TrafficCommand`` as input, to
    allow control by a scenario engine as part of the simulation.
 
-All models can optionally also consume a global ``osi::GroundTruth``
+All models can optionally also consume a global ``osi3::GroundTruth``
 during initialization.
 
 Additionally complex models that combine various aspects of the model
@@ -64,7 +64,7 @@ The following basic conventions apply:
 
    .. code:: XML
 
-      <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="1.0.0" osi-version="3.0.0"/></Tool>
+      <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="1.1.0" osi-version="3.3.0"/></Tool>
 
    where the ``osi-version`` attribute SHOULD contain the major, minor
    and patch version number of the open simulation interface
@@ -163,10 +163,10 @@ the following convention is used to define such variables for FMI 2.0:
    ``<mime-type>``, which MUST be a valid MIME type specification.
 
    In the case of OSI-specified data, the MIME type MUST be of the form
-   ``application/x-open-simulation-interface; type=SensorView; version=3.0.0``
+   ``application/x-open-simulation-interface; type=SensorView; version=3.3.0``
    indicating that the binary content is conformant to a given OSI
-   version (3.0.0 in this example), containing a message of the type
-   given in the ``type`` parameter (````osi::SensorView```` in this
+   version (3.3.0 in this example), containing a message of the type
+   given in the ``type`` parameter (````osi3::SensorView```` in this
    example).
 
    The version parameter given for the MIME type
@@ -206,9 +206,9 @@ Sensor View Inputs
 
 -  The MIME type of the variable MUST specify the ``type=SensorView``,
    e.g.
-   ``application/x-open-simulation-interface; type=SensorView; version=3.0.0``.
+   ``application/x-open-simulation-interface; type=SensorView; version=3.3.0``.
 
--  The sensor view MUST be encoded as ``osi::SensorView`` (see the OSI
+-  The sensor view MUST be encoded as ``osi3::SensorView`` (see the OSI
    specification documentation for more details).
 
 -  The guaranteed lifetime of the sensor view protocol buffer pointer
@@ -245,9 +245,9 @@ Sensor View Input Configuration
 
 -  The MIME type of both variables MUST specify the
    ``type=SensorViewConfiguration``, e.g.
-   ``application/x-open-simulation-interface; type=SensorViewConfiguration; version=3.0.0``.
+   ``application/x-open-simulation-interface; type=SensorViewConfiguration; version=3.3.0``.
 
--  The variables values MUST be encoded as ``osi::SensorViewConfiguration``
+-  The variables values MUST be encoded as ``osi3::SensorViewConfiguration``
    (see the OSI specification documentation for more details).
 
 -  As long as no non-zero value has been assigned to the corresponding
@@ -287,9 +287,9 @@ Sensor View Outputs
 
 -  The MIME type of the variable MUST specify the ``type=SensorView``,
    e.g.
-   ``application/x-open-simulation-interface; type=SensorView; version=3.0.0``.
+   ``application/x-open-simulation-interface; type=SensorView; version=3.3.0``.
 
--  The sensor view MUST be encoded as ``osi::SensorView`` (see the OSI
+-  The sensor view MUST be encoded as ``osi3::SensorView`` (see the OSI
    specification documentation for more details).
 
 -  The guaranteed lifetime of the sensor view protocol buffer pointer
@@ -327,9 +327,9 @@ Sensor Data Outputs
 
 -  The MIME type of the variable MUST specify the ``type=SensorData``,
    e.g.
-   ``application/x-open-simulation-interface; type=SensorData; version=3.0.0``.
+   ``application/x-open-simulation-interface; type=SensorData; version=3.3.0``.
 
--  The sensor data MUST be encoded as ``osi::SensorData`` (see the OSI
+-  The sensor data MUST be encoded as ``osi3::SensorData`` (see the OSI
    specification documentation for more details).
 
 -  The guaranteed lifetime of the sensor data protocol buffer pointer
@@ -368,9 +368,9 @@ Sensor Data Inputs
 
 -  The MIME type of the variable MUST specify the ``type=SensorData``,
    e.g.
-   ``application/x-open-simulation-interface; type=SensorData; version=3.0.0``.
+   ``application/x-open-simulation-interface; type=SensorData; version=3.3.0``.
 
--  The sensor data MUST be encoded as ``osi::SensorData`` (see the OSI
+-  The sensor data MUST be encoded as ``osi3::SensorData`` (see the OSI
    specification documentation for more details).
 
 -  The guaranteed lifetime of the sensor data protocol buffer pointer
@@ -388,7 +388,7 @@ Sensor Data Inputs
 GroundTruth Initialization Parameters
 -------------------------------------
 
-- All models CAN optionally consume an ``osi::GroundTruth`` as an
+- All models CAN optionally consume an ``osi3::GroundTruth`` as an
   initialization parameter.
 
 - If a model needs a ground truth during initialization, it MUST have
@@ -403,7 +403,7 @@ GroundTruth Initialization Parameters
 -  The MIME type of the variable MUST specify the ``type=GroundTruth``, e.g.
    ``application/x-open-simulation-interface; type=GroundTruth; version=3.3.0``.
 
-- ``OSMPGroundTruthInit`` MUST be encoded as ``osi::GroundTruth`` (see the OSI
+- ``OSMPGroundTruthInit`` MUST be encoded as ``osi3::GroundTruth`` (see the OSI
   specification documentation for more details).
 
 - ``OSMPGroundTruthInit`` MUST contain all static data (e.g. roads) encountered
@@ -444,7 +444,7 @@ Traffic Update Outputs
    e.g.
    ``application/x-open-simulation-interface; type=TrafficUpdate; version=3.3.0``.
 
--  The traffic update MUST be encoded as ``osi::TrafficUpdate`` (see the
+-  The traffic update MUST be encoded as ``osi3::TrafficUpdate`` (see the
    OSI specification documentation for more details).
 
 -  The guaranteed lifetime of the traffic update protocol buffer pointer
@@ -488,7 +488,7 @@ Traffic Command Inputs
    e.g.
    ``application/x-open-simulation-interface; type=TrafficCommand; version=3.3.0``.
 
--  The traffic command MUST be encoded as ``osi::TrafficCommand`` (see
+-  The traffic command MUST be encoded as ``osi3::TrafficCommand`` (see
    the OSI specification documentation for more details).
 
 -  The guaranteed lifetime of the traffic command protocol buffer pointer
@@ -521,43 +521,43 @@ with one input and output and no additional features:
       canNotUseMemoryManagementFunctions="true"/>
     <DefaultExperiment startTime="0.0" stepSize="0.020"/>
     <VendorAnnotations>
-      <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="1.0.0" osi-version="3.0.0"/></Tool>
+      <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="1.1.0" osi-version="3.3.0"/></Tool>
     </VendorAnnotations>
     <ModelVariables>
       <ScalarVariable name="OSMPSensorViewIn.base.lo" valueReference="0" causality="input" variability="discrete">
         <Integer start="0"/>
         <Annotations>
-          <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorViewIn" role="base.lo" mime-type="application/x-open-simulation-interface; type=SensorView; version=3.0.0"/></Tool>
+          <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorViewIn" role="base.lo" mime-type="application/x-open-simulation-interface; type=SensorView; version=3.3.0"/></Tool>
         </Annotations>
       </ScalarVariable>
       <ScalarVariable name="OSMPSensorViewIn.base.hi" valueReference="1" causality="input" variability="discrete">
         <Integer start="0"/>
         <Annotations>
-          <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorViewIn" role="base.hi" mime-type="application/x-open-simulation-interface; type=SensorView; version=3.0.0"/></Tool>
+          <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorViewIn" role="base.hi" mime-type="application/x-open-simulation-interface; type=SensorView; version=3.3.0"/></Tool>
         </Annotations>
       </ScalarVariable>
       <ScalarVariable name="OSMPSensorViewIn.size" valueReference="2" causality="input" variability="discrete">
         <Integer start="0"/>
         <Annotations>
-          <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorViewIn" role="size" mime-type="application/x-open-simulation-interface; type=SensorView; version=3.0.0"/></Tool>
+          <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorViewIn" role="size" mime-type="application/x-open-simulation-interface; type=SensorView; version=3.3.0"/></Tool>
         </Annotations>
       </ScalarVariable>
       <ScalarVariable name="OSMPSensorDataOut.base.lo" valueReference="3" causality="output" variability="discrete" initial="exact">
         <Integer start="0"/>
         <Annotations>
-          <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.lo" mime-type="application/x-open-simulation-interface; type=SensorData; version=3.0.0"/></Tool>
+          <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.lo" mime-type="application/x-open-simulation-interface; type=SensorData; version=3.3.0"/></Tool>
         </Annotations>
       </ScalarVariable>
       <ScalarVariable name="OSMPSensorDataOut.base.hi" valueReference="4" causality="output" variability="discrete" initial="exact">
         <Integer start="0"/>
         <Annotations>
-          <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.hi" mime-type="application/x-open-simulation-interface; type=SensorData; version=3.0.0"/></Tool>
+          <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="base.hi" mime-type="application/x-open-simulation-interface; type=SensorData; version=3.3.0"/></Tool>
         </Annotations>
       </ScalarVariable>
       <ScalarVariable name="OSMPSensorDataOut.size" valueReference="5" causality="output" variability="discrete" initial="exact">
         <Integer start="0"/>
         <Annotations>
-          <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="size" mime-type="application/x-open-simulation-interface; type=SensorData; version=3.0.0"/></Tool>
+          <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorDataOut" role="size" mime-type="application/x-open-simulation-interface; type=SensorData; version=3.3.0"/></Tool>
         </Annotations>
       </ScalarVariable>
     </ModelVariables>
