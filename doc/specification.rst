@@ -29,7 +29,7 @@ can be packaged as FMUs:
 -  Logical models, like e.g. sensor fusion models, which consume
    ``osi3::SensorData`` as input and produce ``osi3::SensorData`` as output.
 
--  Traffic Participant models, which consume ``osi3::SensorView`` as input
+-  Traffic participant models, which consume ``osi3::SensorView`` as input
    and generate ``osi3::TrafficUpdate`` as output.  These models can
    internally use e.g. Environmental effect, Sensor and/or Logical models
    as part of a modeled autonomous vehicle, but they can also be used to
