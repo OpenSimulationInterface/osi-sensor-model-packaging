@@ -19,4 +19,4 @@ Add @mentions of the person or team responsible for reviewing proposed changes.
 - [ ] I have made corresponding changes to the [documentation](https://github.com/OpenSimulationInterface/osi-documentation) for osi-sensor-model-packaging.
 - [ ] My changes generate no new warnings.
 - [ ] I have added tests that prove my fix is effective or that my feature works.
-- [ ] New and existing unit tests / travis ci pass locally with my changes.
+- [ ] New and existing unit tests / Github Actions pass locally with my changes.
