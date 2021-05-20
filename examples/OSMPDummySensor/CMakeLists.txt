@@ -11,33 +11,28 @@ if(WIN32)
 else()
 	set(PRIVATE_LOG_PATH "/tmp/OSMPDummySensorLog.log" CACHE FILEPATH "Path to write private log file to")
 endif()
+if(PRIVATE_LOGGING)
+	file(TO_NATIVE_PATH ${PRIVATE_LOG_PATH} PRIVATE_LOG_PATH_NATIVE)
+	string(REPLACE "\\" "\\\\" PRIVATE_LOG_PATH ${PRIVATE_LOG_PATH_NATIVE})
+endif()
 set(VERBOSE_FMI_LOGGING OFF CACHE BOOL "Enable detailed FMI function logging")
 set(DEBUG_BREAKS OFF CACHE BOOL "Enable debugger traps for debug builds of FMU")
 
 string(TIMESTAMP FMUTIMESTAMP UTC)
 string(MD5 FMUGUID modelDescription.in.xml)
 configure_file(modelDescription.in.xml modelDescription.xml @ONLY)
+configure_file(OSMPDummySensorConfig.in.h OSMPDummySensorConfig.h)
 
 find_package(Protobuf 2.6.1 REQUIRED)
 add_library(OSMPDummySensor SHARED OSMPDummySensor.cpp)
 set_target_properties(OSMPDummySensor PROPERTIES PREFIX "")
 target_compile_definitions(OSMPDummySensor PRIVATE "FMU_SHARED_OBJECT")
-target_compile_definitions(OSMPDummySensor PRIVATE "FMU_GUID=\"${FMUGUID}\"")
 if(LINK_WITH_SHARED_OSI)
 	target_link_libraries(OSMPDummySensor open_simulation_interface)
 else()
 	target_link_libraries(OSMPDummySensor open_simulation_interface_pic)
 endif()
-if(PRIVATE_LOGGING)
-	file(TO_NATIVE_PATH ${PRIVATE_LOG_PATH} PRIVATE_LOG_PATH_NATIVE)
-	string(REPLACE "\\" "\\\\" PRIVATE_LOG_PATH_ESCAPED ${PRIVATE_LOG_PATH_NATIVE})
-	target_compile_definitions(OSMPDummySensor PRIVATE
-		"PRIVATE_LOG_PATH=\"${PRIVATE_LOG_PATH_ESCAPED}\"")
-endif()
-target_compile_definitions(OSMPDummySensor PRIVATE
-	$<$<BOOL:${PUBLIC_LOGGING}>:PUBLIC_LOGGING>
-	$<$<BOOL:${VERBOSE_FMI_LOGGING}>:VERBOSE_FMI_LOGGING>
-	$<$<BOOL:${DEBUG_BREAKS}>:DEBUG_BREAKS>)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 if(WIN32)
 	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -67,5 +62,6 @@ add_custom_command(TARGET OSMPDummySensor
 	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
 	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/OSMPDummySensor.cpp" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
 	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/OSMPDummySensor.h" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
+	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/OSMPDummySensorConfig.h" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/OSMPDummySensorConfig.h"
 	COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:OSMPDummySensor> $<$<PLATFORM_ID:Windows>:$<$<CONFIG:Debug>:$<TARGET_PDB_FILE:OSMPDummySensor>>> "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
 	COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} -E tar "cfv" "../OSMPDummySensor.fmu" --format=zip "modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")
