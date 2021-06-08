@@ -219,8 +219,9 @@ Sensor View Inputs
    the end of the corresponding calculation, and thus does not need to
    copy the contents in that case (zero copy input).
 
--  The sensor view passed to the model must contain data as specified by
-   the corresponding ``OSMPSensorViewInConfiguration`` parameter.
+-  The sensor view passed to the model MUST contain data as specified by
+   the corresponding ``OSMPSensorViewInConfiguration`` parameter and, if
+   present, by the corresponding ``OSMPGroundTruthInitConfiguration``.
 
 Sensor View Input Configuration
 -------------------------------
@@ -393,8 +394,10 @@ GroundTruth Initialization Parameters
 
 - If a model needs a ground truth during initialization, it MUST have
   a parameter named ``OSMPGroundTruthInit``. Its purpose is to provide
-  the model with a view of the static environment (i.e. the map), in
-  OSI format.
+  the model with a view of the static environment, in OSI format. 
+  What is regarded as static, is specified in 
+  ``osi3::GroundTruthInitConfiguration`` (see the OSI
+   specification documentation for more details). 
 
 -  ``OSMPGroundTruthInit`` MUST be defined as a notional discrete binary
    input parameter variable, as specified above, with
@@ -406,11 +409,12 @@ GroundTruth Initialization Parameters
 - ``OSMPGroundTruthInit`` MUST be encoded as ``osi3::GroundTruth`` (see the OSI
   specification documentation for more details).
 
-- ``OSMPGroundTruthInit`` MUST contain all static data (e.g. roads) encountered
-  by the model during a simulation run. Any dynamic data (e.g. MovingObjects)
-  it contains MUST NOT be used and has no specified semantics.
+- ``OSMPGroundTruthInit`` MUST contain all data which is requested by the model 
+  in ``OSMPGroundTruthInitConfiguration``but MUST NOT contain more data. The 
+  model is expected to be able to concatenate data during runtime based on its 
+  request. 
 
-- The Ids of objects in ``OSMPGroundTruthInit`` MUST be identical to the Ids of
+- DEPRECATED: The Ids of objects in ``OSMPGroundTruthInit`` MUST be identical to the Ids of
   the same objects contained in later ``OSMPSensorViewIn`` or other input data.
 
 - If the model is instantiated multiple times, then all instantiations SHOULD
@@ -423,6 +427,52 @@ GroundTruth Initialization Parameters
    provided as input to the FMU MUST be from the time of the call to
    ``fmi2SetInteger`` that provides those values until the end of the following
    ``fmi2ExitInitializationMode`` call.
+
+GroundTruth Initialization Configuration
+----------------------------------------
+
+- For the ``OSMPGroundTruthInit`` variable (named with the base prefix 
+  ``OSMPGroundTruthInit``) a corresponding calculatedParameter (named with base
+  prefix ``OSMPGroundTruthInitConfigRequest``) and a parameter (named with base
+  prefix ``OSMPGroundTruthInitConfig``) CAN exist. If the calculatedParameter 
+  exists, then the corresponding parameter MUST exist. 
+
+-  If the calculatedParameter exists it MUST be named with the prefix
+   ``OSMPGroundTruthInitConfigRequest``, and MUST have a ``causality`` of
+   ``calculatedParameter`` and a variability of either ``fixed`` or
+   ``tunable``.
+
+-  If the parameter exists it MUST be named with the prefix
+   ``OSMPGroundTruthInitConfig``, and MUST have a ``causality`` of
+   ``parameter`` and a variability of either ``fixed`` or ``tunable``,
+   where the variability MUST match the variability of the corresponding
+   calculatedParameter.
+
+-  The MIME type of both variables MUST specify the
+   ``type=GroundTruthInitConfiguration``, e.g.
+   ``application/x-open-simulation-interface; type=GroundTruthInitConfiguration; version=3.3.1``.
+
+-  The variables values MUST be encoded as ``osi3::GroundTruthInitConfiguration``
+   (see the OSI specification documentation for more details).
+
+-  As long as no non-zero value has been assigned to the corresponding
+   ``OSMPGroundTruthInitConfig`` parameter, the calculated parameter value
+   MUST be the desired configuration for the corresponding 
+   ``OSMPSensorViewIn`` variable (regarding content to be sent at runtime).
+   It is based on model internal requirements and any other parameters on 
+   which this calculated parameter depends.
+
+   Once a non-zero value has been assigned to the corresponding
+   ``OSMPGroundTruthInitConfig`` parameter, the value of this calculated
+   parameter MUST be an encoded OSI protocol buffer containing the same
+   data as the parameter.
+
+-  The simulation environment SHOULD, during FMI initialization mode,
+   query the ``OSMPGroundTruthInitConfigRequest`` calculatedParameter
+   value, and, taking this value into account, determine a suitable and
+   supported GroundTruthInit configuration. Based on this configuration
+   the simulation environment SHOULD send ``OSMPGroundTruthInit`` as 
+   specified in the section above before exiting initialization mode.
 
 Traffic Update Outputs
 ----------------------
