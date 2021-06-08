@@ -396,8 +396,7 @@ GroundTruth Initialization Parameters
   a parameter named ``OSMPGroundTruthInit``. Its purpose is to provide
   the model with a view of the static environment, in OSI format. 
   What is regarded as static, is specified in 
-  ``osi3::GroundTruthInitConfiguration`` (see the OSI
-   specification documentation for more details). 
+  ``osi3::GroundTruthInitConfiguration`` (see the OSI specification documentation for more details). 
 
 -  ``OSMPGroundTruthInit`` MUST be defined as a notional discrete binary
    input parameter variable, as specified above, with
