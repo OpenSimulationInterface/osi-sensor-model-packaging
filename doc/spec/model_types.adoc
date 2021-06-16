@@ -1,11 +1,23 @@
 = Model types
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Et malesuada fames ac turpis egestas.
-Mauris pharetra et ultrices neque ornare aenean euismod elementum nisi.
-Nulla facilisi morbi tempus iaculis urna id. Justo eget magna fermentum iaculis.
-Sed augue lacus viverra vitae congue eu.
-Velit ut tortor pretium viverra suspendisse.
-Amet commodo nulla facilisi nullam vehicula ipsum a.
-Nibh nisl condimentum id venenatis a.
-Diam vel quam elementum pulvinar etiam non quam lacus suspendisse.
+The current specification supports packaging the following model types as FMUs:
+
+Environmental effect model::
+Consumes `osi3::SensorView` as input and produces `osi3::SensorView` as output.
+
+Sensor models::
+Consumes `osi3::SensorView` as input and produces `osi3::SensorData` as output.
+
+Logical models::
+Consumes `osi3::SensorData` as input and produces `osi3::SensorData` as output.
+
+Traffic participant models::
+Consumes `osi3::SensorView` as input and produces `osi3::TrafficUpdate` as output.
+Traffic participant models may internally use environmental effect models, sensor models, or logical models as part of a modeled autonomous vehicle.
+They may also be used to implement surrounding traffic in simplified ways.
+Traffic participant models may consume `osi3::TrafficCommand` as input to allow control by a scenario engine as part of the simulation.
+
+All models may also consume a global `osi3::GroundTruth` during initialization.
+
+Complex models may combine various aspects of the above model types.
+However configuration and setup of such FMUs will require manual intervention.
