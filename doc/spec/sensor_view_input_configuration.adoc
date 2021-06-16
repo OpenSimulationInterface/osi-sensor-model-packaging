@@ -1,11 +1,41 @@
 = Sensor view input configuration
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Et malesuada fames ac turpis egestas.
-Mauris pharetra et ultrices neque ornare aenean euismod elementum nisi.
-Nulla facilisi morbi tempus iaculis urna id. Justo eget magna fermentum iaculis.
-Sed augue lacus viverra vitae congue eu.
-Velit ut tortor pretium viverra suspendisse.
-Amet commodo nulla facilisi nullam vehicula ipsum a.
-Nibh nisl condimentum id venenatis a.
-Diam vel quam elementum pulvinar etiam non quam lacus suspendisse.
+Sensor-view input configurations are present in sensor models.
+
+For each notional sensor view input variable with the base prefix `OSMPSensorViewIn`, a corresponding calculated parameter with the base prefix `OSMPSensorViewInConfigRequest` and a parameter with the base prefix `OSMPSensorViewInConfig` can exist.
+
+During FMI initialization mode, the simulation environment queries the value of `OSMPSensorViewInConfigRequest`.
+Taking this value into account, a suitable and supported sensor-view input configuration is determined.
+Before exiting initialization mode, the simulation environment then sets this configuration using the corresponding `OSMPSensorViewInConfig` parameter.
+
+
+**Prefix**
+
+Sensor-view input configurations shall be named with the following prefix:
+
+[source]
+----
+OSMPSensorViewInConfig
+----
+
+Sensor-view input-configuration requests shall be named with the following prefix:
+
+[source]
+----
+OSMPSensorViewInConfigRequest
+----
+
+
+**Rules**
+
+* If the calculated parameter `OSMPSensorViewInConfigRequest` exists, then the corresponding parameter `OSMPSensorViewInConfig` shall exist.
+* The variable values shall be encoded as `osi3::SensorViewConfiguration`.
+* `OSMPSensorViewInConfigRequest` shall have a `@causality = "calculatedParameter"` and a `@variability = "fixed"` or `@variability = "tunable"`.
+* `OSMPSensorViewInConfig` shall have a `@causality = "parameter"` and a `@variability = "fixed"` or `@variability = "tunable"`.
+* The `@variability` values of `OSMPSensorViewInConfigRequest` and `OSMPSensorViewInConfig` shall match.
+* The MIME type of both variables shall specify `@type="SensorViewConfiguration"`.
+* As long as no non-zero value has been assigned to `OSMPSensorViewInConfig`, the value of the corresponding `OSMPSensorViewInConfigRequest` shall be the desired sensor view configuration for the corresponding variable `OSMPSensorViewIn`.
+This configuration is based on model-internal requirements or any other parameters on which this calculated parameter depends.
+* Once a non-zero value has been assigned to `OSMPSensorViewInConfig`, the value of the corresponding `OSMPSensorViewInConfigRequest` shall be an encoded OSI protocol buffer containing the same data as the `OSMPSensorViewInConfig`.
+* During FMI initialization mode, the simulation environment should query the value of `OSMPSensorViewInConfigRequest` and determine a suitable sensor-view input configuration.
+* Before exiting initialization mode, the simulation environment shall set the sensor-view input configuration using the corresponding `OSMPSensorViewInConfig` parameter.

@@ -28,8 +28,6 @@ include::./misc/idea_osmp.adoc[leveloffset=+1]
 
 include::./spec/model_types.adoc[leveloffset=+2]
 
-include::./spec/fmi_20.adoc[leveloffset=+2]
-
 include::./spec/basic_conventions.adoc[leveloffset=+2]
 
 include::./spec/binary_variables.adoc[leveloffset=+2]
@@ -49,8 +47,6 @@ include::./spec/ground_truth_init_parameters.adoc[leveloffset=+2]
 include::./spec/traffic_command_inputs.adoc[leveloffset=+2]
 
 include::./spec/traffic_update_outputs.adoc[leveloffset=+2]
-
-include::./spec/future_evolution.adoc[leveloffset=+2]
 
 == Setting up OSMP
 
