@@ -1,11 +1,59 @@
-= Definition of binary variables
+= Binary variables
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Et malesuada fames ac turpis egestas.
-Mauris pharetra et ultrices neque ornare aenean euismod elementum nisi.
-Nulla facilisi morbi tempus iaculis urna id. Justo eget magna fermentum iaculis.
-Sed augue lacus viverra vitae congue eu.
-Velit ut tortor pretium viverra suspendisse.
-Amet commodo nulla facilisi nullam vehicula ipsum a.
-Nibh nisl condimentum id venenatis a.
-Diam vel quam elementum pulvinar etiam non quam lacus suspendisse.
+In order to support the efficient exchange of binary data, especially binary data as provided by the OSI Protocol Buffer definitions, the following conventions are used to define such variables for FMI 2.0.
+
+A notional binary variable has a valid structured name according to FMI 2.0.
+No other variable is allowed to have the same name as the notional binary variable to avoid conflicts.
+
+For a notional binary variable, three actual FMU integer variables shall be defined where `<prefix>` is the name of the notional binary variable:
+
+`<prefix>.base.lo`::
+Lower, meaning least significant, 32-bit address of the binary data buffer to be passed into or out of the model, cast into a signed 32-bit integer without changing the bit values.
+`<prefix>.base.hi`::
+Higher, meaning most significant, 32-bit address of the binary data buffer to be passed into or out of the model, cast into a signed 32-bit integer without changing the bit values.
+Note that this variable is only used for 64-bit platforms.
+For 32-bit platforms it shall still be present but will always be 0 to support FMUs including both 32-bit and 64-bit implementations.
+`<prefix>.size`::
+Size of the binary data buffer to be passed into or out of the model as a signed 32-bit integer.
+This restricts the maximum size of binary data buffers being passed around to a size of less than 2 GB.
+
+Each variable shall be marked as belonging to a notional binary variable named `<prefix>`, with the given variable having the specified `<role>`, and the transported binary content being specified by the mime-type attribute, as given by `<mime-type>`.
+`<prefix>` is the prefix as defined above, and `<role>` is either `base.lo`, `base.hi`, or `size`, depending on the variable.
+
+It is an error if there is not exactly one variable of each role for the same name.
+
+It is an error if the MIME-types specified in the annotations for one notional binary variable differ.
+
+The version parameter given for the MIME type `application/x-open-simulation-interface` will default to the version specified in the `@osi-version` attribute as part of the top-level `<osmp:osmp>` annotation.
+It is an error if a version number is specified neither as part of the MIME type nor using the `@osi-version` attribute.
+
+The guaranteed lifetime of the binary data buffer pointer transported through the actual variables depends on the variable type.
+
+**Rules**
+
+* The name of a notional binary variable given by `<prefix>` shall be a valid structured name according to FMI 2.0.
+* For a notional binary variable, three actual FMU integer variables shall be defined:
+** `<prefix>.base.lo`
+** `<prefix>.base.hi`
+** `<prefix>.size`
+* The three actual variables shall have matching causality and variability, which will be the causality and variability of the notional binary variable.
+* The variables shall have a start value of 0, indicating that no valid binary data buffer is available.
+The variables may have a different start value if the combination of causality and variability precludes this, for example, for `@variability = fixed` or `@variability = tunable` and  `@causality = calculatedParameter`.
+* Model FMUs shall interpret values of 0 for the merged base address or the size to indicate that no valid binary data buffer is available.
+Models shall handle this case safely.
+* The three actual variables shall contain an annotation of the following form in the `<Annotations>` child element of their `<ScalarVariable>` element of the `modelDescription.xml`:
++
+[source]
+----
+<Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="<prefix>" role="<role>" mime-type="<mime-type>"/></Tool>
+----
++
+* The given MIME type given in `@mime-type` shall be a valid MIME type specification.
+* In the case of OSI-specified data, the MIME type shall have the following form to indicate that the binary content is conformant to the given OSI version and contains a message of the given type:
++
+[source]
+----
+application/x-open-simulation-interface; type=<type>; version=x.y.z
+----
++
+* The FMU shall not contain any variable that is named `<prefix>`.
