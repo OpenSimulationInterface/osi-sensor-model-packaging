@@ -48,14 +48,5 @@ include::./spec/traffic_command_inputs.adoc[leveloffset=+2]
 
 include::./spec/traffic_update_outputs.adoc[leveloffset=+2]
 
-== Setting up OSMP
+include::./setup/build_install_example.adoc[leveloffset=+1]
 
-include::./setup/installing_dependencies.adoc[leveloffset=+2]
-
-include::./setup/building_examples.adoc[leveloffset=+2]
-
-== Using OSMP
-
-TODO: Add documentation on how to use OSMP
-
-include::./use/examples.adoc[leveloffset=+2]
