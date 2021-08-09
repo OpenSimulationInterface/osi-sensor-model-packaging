@@ -5,7 +5,7 @@ The sensor data passed to the model depends on prior models or processes that ge
 The exact details of the contents therefore depend on the processing pipeline.
 
 The logical model can rely on the provided buffer remaining valid from the moment it is passed in until the end of the corresponding calculation.
-Itdoes not need to copy the contents (zero-copy input).
+It does not need to copy the contents (zero-copy input).
 
 **Prefix**
 
