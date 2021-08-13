@@ -14,7 +14,7 @@ This allows a model to do expensive map calculations only once during initializa
 * `OSMPGroundTruthInit` shall be encoded as `osi3::GroundTruth`.
 * If a model needs ground truth during initialization, it shall have a parameter named `OSMPGroundTruthInit`.
 * `OSMPGroundTruthInit` shall be defined as a notional discrete binary input parameter variable, with `@causality="parameter"`, `@variability="fixed"` and `@initial="exact"`.
-* The MIME type of the variable shall specify the @type=GroundTruth, e.g. application/x-open-simulation-interface; type=GroundTruth; version=3.3.1.
+* The MIME type of the variable shall specify the @type=GroundTruth.
 * `OSMPGroundTruthInit` shall contain all static data encountered by the model during a simulation run.
 * If `OSMPGroundTruthInit` contains any dynamic data, it shall not be used.
 * The IDs of objects in `OSMPGroundTruthInit` shall be identical to the IDs of the same objects contained in later `OSMPSensorViewIn` or other input data.

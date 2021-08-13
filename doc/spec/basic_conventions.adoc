@@ -23,7 +23,7 @@ This includes all kinds of variables as specified in the FMI 2.0 standard.
 +
 [source]
 ----
-<Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="1.1.1" osi-version="3.3.1"/></Tool>
+<Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="1.1.1" osi-version="x.y.z"/></Tool>
 ----
 +
 * The `@osi-version` attribute should contain the major, minor and patch version number of the Open Simulation Interface specification that this model was compiled against.
