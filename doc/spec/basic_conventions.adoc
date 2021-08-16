@@ -1,7 +1,7 @@
 = Basic conventions
 
 With OSMP, models are packaged as valid FMI-2.0 FMU for co-simulation.
-The FMU shall be marked as conformant to this version of the specification.
+It is necessary that the FMU is marked as conformant to this version of the OSMP specification.
 
 If OSI data is used with OSMP, the OSI version that the model was compiled against should be indicated.
 If the OSI major version changes, the importing environment can be unable to communicate with the model.
@@ -12,7 +12,7 @@ It indicates to the simulation that it can call the FMU `fmi2DoStep` routine at 
 If the step size is not supplied, the model communication rate is either determined from any input configuration data the model provides or it must be configured manually.
 
 Models are not allowed to rely on data connections that are not specified by OSMP.
-However, the model may use other connections, as long as they are optional and can be left at their respective default value.
+The model may still use other data connections, as long as they are optional and can be left at their respective default value.
 This includes all kinds of variables as specified in the FMI 2.0 standard.
 
 **Rules**
@@ -26,10 +26,10 @@ This includes all kinds of variables as specified in the FMI 2.0 standard.
 <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="1.1.1" osi-version="x.y.z"/></Tool>
 ----
 +
-* The `@osi-version` attribute should contain the major, minor and patch version number of the Open Simulation Interface specification that this model was compiled against.
+* The `@osi-version` attribute should contain the major, minor and patch version number of the OSI specification that this model was compiled against.
 * If OSMP is used without OSI data being transported across binary variables, `@osi-version` should not be specified.
 * The variable naming convention of the FMU shall be structured.
 * The default experiment step size should be defined in seconds.
 * The default experiment step size should indicate the actual model refresh rate for the input side.
 * The model shall not rely on data connections that are not specified by OSMP.
-* The model may have inputs, outputs, and parameters that are not specified by OSMP, as long as the model can be run correctly with all of those variables left unconnected and at their default values.
+* The model may have inputs, outputs, and parameters that are not specified by OSMP, if the model can be run correctly with all of those variables left unconnected and at their default values.

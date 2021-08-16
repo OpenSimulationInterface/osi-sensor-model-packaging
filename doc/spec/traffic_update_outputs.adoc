@@ -5,7 +5,7 @@ Traffic-update outputs are present in traffic participant models.
 The simulation engine can rely on the provided buffer to remain valid from the moment it is passed out until the end of the next co-simulation calculation cycle.
 Thus, the simulation engine does not need to copy the contents in that case, corresponding to zero-copy output for the simulation engine at the cost of double buffering for the traffic participant model.
 This arrangement is required to support use of the traffic participant model FMUs in simulation engines that have no special support for the protocol buffer pointers.
-Using this convention, it is possible to daisy chain FMUs with protocol buffer inputs and outputs in a normal simulation engine, for example, MATLAB/Simulink, and get valid results.
+Using this convention, it is possible to daisy-chain FMUs with protocol buffer inputs and outputs in a normal simulation engine, for example, MATLAB/Simulink, and get valid results.
 
 **Prefix**
 

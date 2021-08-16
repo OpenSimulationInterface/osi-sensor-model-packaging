@@ -2,7 +2,8 @@
 
 Sensor-view inputs are present in sensor models.
 
-The sensor model can rely on the provided buffer remaining valid from the moment it is passed in until the end of the corresponding calculation, and thus does not need to copy the contents in that case (zero-copy input).
+The sensor model can rely on the provided buffer remaining valid from the moment it is passed in until the end of the corresponding calculation.
+It does not need to copy the contents (zero-copy input).
 
 **Prefix**
 

@@ -1,6 +1,6 @@
 = Binary variables
 
-In order to support the efficient exchange of binary data, especially binary data as provided by the OSI Protocol Buffer definitions, the following conventions are used to define such variables for FMI 2.0.
+To support the efficient exchange of binary data, especially binary data as provided by the OSI Protocol Buffer definitions, the following conventions are used to define such variables for FMI 2.0.
 
 A notional binary variable has a valid structured name according to FMI 2.0.
 No other variable is allowed to have the same name as the notional binary variable to avoid conflicts.
@@ -17,8 +17,8 @@ For 32-bit platforms it shall still be present but will always be 0 to support F
 Size of the binary data buffer to be passed into or out of the model as a signed 32-bit integer.
 This restricts the maximum size of binary data buffers being passed around to a size of less than 2 GB.
 
-Each variable shall be marked as belonging to a notional binary variable named `<prefix>`, with the given variable having the specified `<role>`, and the transported binary content being specified by the mime-type attribute, as given by `<mime-type>`.
-`<prefix>` is the prefix as defined above, and `<role>` is either `base.lo`, `base.hi`, or `size`, depending on the variable.
+Each variable shall be marked as belonging to a notional binary variable named `<prefix>`, with the given variable having the specified role, and the transported binary content being specified by the `@mime-type` attribute.
+`<prefix>` is the prefix as defined above, and `@role` is either `base.lo`, `base.hi`, or `size`, depending on the variable.
 
 It is an error if there is not exactly one variable of each role for the same name.
 
@@ -48,7 +48,7 @@ Models shall handle this case safely.
 <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="<prefix>" role="<role>" mime-type="<mime-type>"/></Tool>
 ----
 +
-* The given MIME type given in `@mime-type` shall be a valid MIME type specification.
+* The MIME type given in `@mime-type` shall be a valid MIME type specification.
 * In the case of OSI-specified data, the MIME type shall have the following form to indicate that the binary content is conformant to the given OSI version and contains a message of the given type:
 +
 [source]

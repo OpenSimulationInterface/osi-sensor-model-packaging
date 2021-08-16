@@ -6,7 +6,7 @@ OSMP includes three examples located in `_osmp_/examples`:
 Can be used as a simple dummy sensor model, demonstrating the use of OSI for sensor models consuming sensor-view data and generating sensor-data output.
 
 `OSMPDummySource/`::
-Can be used as a simplistic source of sensor-view data and ground-truth data.
+Can be used as a simple source of sensor-view data and ground-truth data.
 It can be connected to the input of an `OSMPDummySensor` model, for simple testing and demonstration purposes.
 
 `OSMPCNetworkProxy/`::

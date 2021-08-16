@@ -44,5 +44,9 @@ include::./spec/traffic_command_inputs.adoc[leveloffset=+2]
 
 include::./spec/traffic_update_outputs.adoc[leveloffset=+2]
 
-include::./setup/build_install_example.adoc[leveloffset=+1]
+== Examples
+
+include::./setup/build_install_example.adoc[leveloffset=+2]
+
+include::./misc/example.adoc[leveloffset=+2]
 
