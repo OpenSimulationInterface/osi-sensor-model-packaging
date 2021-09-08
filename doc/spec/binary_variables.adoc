@@ -59,3 +59,11 @@ The version parameter of the MIME type `application/x-open-simulation-interface`
 It is an error if a version number is specified neither as part of the MIME type nor using the `@osi-version` attribute.
 
 The guaranteed lifetime of the binary data buffer pointer transported through the actual variables is defined for each kind of variable, as specified in the following sections.
+
+Generally the lifetime for inputs is from the time they are set to the time the corresponding co-simulation step calculation finishes.
+For outputs the lifetime is extended from the point the output is provided at the end of a co-simulation step until the end of the next co-simulation step.
+
+This convention allows the use of FMUs in simulation engines that have no special support for the protocol buffer pointers:
+The simulation engine can rely on the provided buffer to remain valid from the moment it is passed out of a model until the end of the next co-simulation calculation cycle.
+Thus, the simulation engine does not need to copy the contents in that case, corresponding to zero-copy output for the simulation engine at the cost of double buffering for the model providing the output data.
+It is possible to daisy-chain FMUs with protocol buffer inputs and outputs in a normal simulation engine supporting FMI, and get valid results.
