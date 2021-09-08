@@ -33,7 +33,7 @@ Models FMUs shall handle this case safely.
 
 The three actual variables shall contain an annotation of the following form in the `<Annotations>` child element of their `<ScalarVariable>` element of the `modelDescription.xml`:
 
-[source]
+[source,xml]
 ----
 <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="<prefix>" role="<role>" mime-type="<mime-type>"/></Tool>
 ----
@@ -48,7 +48,7 @@ It is an error if the MIME types specified in the annotations for one notional b
 
 In the case of OSI-specified data, the MIME type shall have the following form to indicate that the binary content is conformant to the given OSI version and contains a message of the given type:
 
-[source]
+[source,xml]
 ----
 application/x-open-simulation-interface; type=<type>; version=x.y.z
 ----

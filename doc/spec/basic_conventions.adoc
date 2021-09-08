@@ -5,7 +5,7 @@ Unless otherwise noted, all specifications in the FMI 2.0 standard apply as-is.
 
 The following annotation shall be placed into the `<VendorAnnotations>` element of the `modelDescription.xml` to mark the FMU as being conformant to this version of the specification:
 
-[source]
+[source,xml]
 ----
 <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="1.1.1" osi-version="x.y.z"/></Tool>
 ----
