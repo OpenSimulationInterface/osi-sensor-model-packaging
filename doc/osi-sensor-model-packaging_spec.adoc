@@ -17,8 +17,7 @@ endif::[]
 
 = OSI Sensor Model Packaging
 
-
-include::./misc/idea_osmp.adoc[leveloffset=+1]
+include::./misc/introduction.adoc[leveloffset=+1]
 
 == OSMP specification
 
