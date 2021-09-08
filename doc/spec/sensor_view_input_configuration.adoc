@@ -15,7 +15,7 @@ Sensor view input configurations shall be named with the following prefix:
 OSMPSensorViewInConfig
 ----
 
-Sensor view input-configuration requests shall be named with the following prefix:
+Sensor view input configuration requests shall be named with the following prefix:
 
 [source]
 ----

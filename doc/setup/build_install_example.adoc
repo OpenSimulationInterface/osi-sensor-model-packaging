@@ -3,10 +3,10 @@
 OSMP includes three examples located in `_osmp_/examples`:
 
 `OSMPDummySensor/`::
-Can be used as a simple dummy sensor model, demonstrating the use of OSI for sensor models consuming sensor-view data and generating sensor-data output.
+Can be used as a simple dummy sensor model, demonstrating the use of OSI for sensor models consuming sensor view data and generating sensor data output.
 
 `OSMPDummySource/`::
-Can be used as a simple source of sensor-view data and ground-truth data.
+Can be used as a simple source of sensor view data and ground-truth data.
 It can be connected to the input of an `OSMPDummySensor` model, for simple testing and demonstration purposes.
 
 `OSMPCNetworkProxy/`::
@@ -68,16 +68,9 @@ cd build
 cmake ..
 ----
 +
-. Run _make_.
+. Run _cmake_ build.
 +
 [source]
 ----
-make
-----
-+
-. Install the examples.
-+
-[source]
-----
-sudo make install
+cmake --build .
 ----

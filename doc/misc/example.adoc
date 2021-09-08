@@ -1,7 +1,7 @@
-= Example: Simple sensor-model FMU
+= Example: Simple sensor model FMU
 
 Then following example shows the content of a `modelDescription.xml` file that satisfies the requirements of OSMP.
-The example describes a sensor-model FMU with one input, one output, and no additional features:
+The example describes a sensor model FMU with one input, one output, and no additional features:
 
 [source]
 ----
