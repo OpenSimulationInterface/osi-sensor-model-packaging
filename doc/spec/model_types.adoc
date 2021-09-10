@@ -1,0 +1,27 @@
+= Model types
+
+The current specification supports packaging the following model types as _Functional Mock-up Units_ (FMUs):
+
+Environmental effect model::
+This model type can be used to model environmental effects or the physical parts of sensors.
+It consumes `osi3::SensorView` as input and produces `osi3::SensorView` as output.
+
+Sensor models::
+This model type is used to model the perception function of sensors.
+It consumes `osi3::SensorView` as input and produces `osi3::SensorData` as output.
+
+Logical models::
+This model type is used to model the further processing of sensor output, for example, sensor fusion.
+It consumes `osi3::SensorData` as input and produces `osi3::SensorData` as output.
+
+Traffic participant models::
+This model type is used to model whole traffic participants, such as vehicles or pedestrians.
+Traffic participant models may internally use environmental effect models, sensor models, or logical models as part of a modeled autonomous vehicle.
+They may also be used to implement surrounding traffic in simplified ways.
+Traffic participant models consume `osi3::SensorView` as input and produce `osi3::TrafficUpdate` as output.
+They may also consume `osi3::TrafficCommand` as input to allow control by a scenario engine or other coordinating function.
+
+All models may also consume a global `osi3::GroundTruth` parameter during initialization.
+
+Complex models may combine various aspects of the above model types.
+Configuration and setup of such FMUs require manual intervention.

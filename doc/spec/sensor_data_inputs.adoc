@@ -1,0 +1,20 @@
+= Sensor data inputs
+
+**Prefix**
+
+Sensor data inputs shall be named with the following prefix:
+
+[source]
+----
+OSMPSensorDataIn
+----
+
+**Rules**
+
+* If only one sensor data input is configured, the prefix shall only be `OSMPSensorDataIn`.
+* If more than one sensor data input is configured, the prefix shall be extended by an array index, for example, `OSMPSensorDataIn[1]` and `OSMPSensorDataIn[2]`.
+* Array indices shall start at 1 and shall be consecutive.
+* Each sensor data input shall be defined as a notional discrete binary input variable with `@causality="input"` and `@variability="discrete"`.
+* The MIME type of the variable shall specify the `type="SensorData"` as part of the MIME type parameters.
+* Sensor data shall be encoded as `osi3::SensorData`.
+* The guaranteed lifetime of the sensor data protocol-buffer pointer provided as input to the FMU shall be from the time of the call to `fmi2SetInteger` that provides those values until the end of the following `fmi2DoStep` call.

@@ -1,0 +1,51 @@
+ifndef::THIS_STANDARD[] 
+
+:asciidoc-resources: ../asciidoc-resources
+include::{asciidoc-resources}/preamble.adoc[]
+
+:revnumber: --localbuild--
+:revdate: {docdate}
+
+:topicdir: topics
+:reusedir: reuse
+
+:imagesdir: .
+:images_open_simulation_interface: ./images
+
+
+endif::[]
+
+= OSI Sensor Model Packaging
+
+include::./misc/introduction.adoc[leveloffset=+1]
+
+== OSMP specification
+
+include::./spec/model_types.adoc[leveloffset=+2]
+
+include::./spec/basic_conventions.adoc[leveloffset=+2]
+
+include::./spec/binary_variables.adoc[leveloffset=+2]
+
+include::./spec/sensor_view_inputs.adoc[leveloffset=+2]
+
+include::./spec/sensor_view_input_configuration.adoc[leveloffset=+2]
+
+include::./spec/sensor_view_outputs.adoc[leveloffset=+2]
+
+include::./spec/sensor_data_inputs.adoc[leveloffset=+2]
+
+include::./spec/sensor_data_outputs.adoc[leveloffset=+2]
+
+include::./spec/ground_truth_init_parameters.adoc[leveloffset=+2]
+
+include::./spec/traffic_command_inputs.adoc[leveloffset=+2]
+
+include::./spec/traffic_update_outputs.adoc[leveloffset=+2]
+
+== Examples
+
+include::./setup/build_install_example.adoc[leveloffset=+2]
+
+include::./misc/example.adoc[leveloffset=+2]
+

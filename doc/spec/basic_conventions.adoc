@@ -1,0 +1,25 @@
+= Basic conventions
+
+The model shall be packaged as a valid FMU for co-simulation, as specified in the FMI 2.0 standard.
+Unless otherwise noted, all specifications in the FMI 2.0 standard apply as-is.
+
+The following annotation shall be placed into the `<VendorAnnotations>` element of the `modelDescription.xml` to mark the FMU as being conformant to this version of the specification:
+
+[source,xml]
+----
+<Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp version="1.1.1" osi-version="x.y.z"/></Tool>
+----
+
+The `@osi-version` attribute should contain the major, minor, and patch version number of the OSI specification that this model was compiled against.
+Indicating the OSI version ensures that the importing environment can determine which OSI version to use prior to communicating with the FMU.
+
+If OSMP is used without OSI data being transported across binary variables, `@osi-version` should not be specified.
+
+The variable naming convention of the FMU shall be structured.
+
+The default experiment step size should be defined.
+It should indicate the actual model refresh rate for the input side.
+A simulator can call the FMU `fmi2DoStep` routine at this implied rate.
+If the step size is not supplied, the model communication rate is determined from any input configuration data the model provides, or it must be configured manually.
+
+The model may have inputs, outputs, and parameters that are not specified by OSMP if the model can be run correctly with all of those variables left unconnected and at their default values.

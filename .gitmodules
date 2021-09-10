@@ -2,3 +2,6 @@
 	path = examples/open-simulation-interface
 	url = https://github.com/OpenSimulationInterface/open-simulation-interface.git
 	branch = master
+[submodule "asciidoc-resources"]
+	path = asciidoc-resources
+	url = https://code.asam.net/simulation/asciidoc-resources.git
