@@ -1,7 +1,7 @@
 = Traffic command inputs
 
 Traffic command inputs are present in traffic participant models.
-This allows control of the traffic participant behavior by scenario engines.
+This makes it possible to control of the traffic participant behavior using scenario engines.
 
 **Prefix**
 
@@ -14,9 +14,9 @@ Traffic command inputs shall be named with the following prefix:
 
 **Rules**
 
-* If only one traffic command input is configured, the prefix shall only be `OSMPTrafficCommandIn`. 
-* If more than one traffic command input is configured, the prefix shall be extended by an array index designator, for example `OSMPTrafficCommandIn[1]` and `OSMPTrafficCommandIn[2]`. 
-* Array indices shall start at 1 and shall be consecutive. 
+* If only one traffic command input is configured, the prefix shall only be `OSMPTrafficCommandIn`.
+* If more than one traffic command input is configured, the prefix shall be extended by an array index designator, for example `OSMPTrafficCommandIn[1]` and `OSMPTrafficCommandIn[2]`.
+* Array indices shall start at 1 and shall be consecutive.
 * Each traffic command input shall be defined as a notional discrete binary input variable with `@causality="input"` and `@variability="discrete"`.
 * The MIME type of the variable shall specify the `type="TrafficCommand"` as part of the MIME type parameters.
 * Traffic commands shall be encoded as `osi3::TrafficCommand`.
