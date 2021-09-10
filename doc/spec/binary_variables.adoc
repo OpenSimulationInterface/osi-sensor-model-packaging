@@ -1,7 +1,7 @@
 = Binary variables
 
 FMI 2.0 does not directly support the efficient exchange of arbitrary binary data between FMUs.
-OSMP, therefore, introduces the concept of notional binary variables, which are mapped to actual integer variables for use with FMI 2.0.
+OSMP therefore introduces the concept of notional binary variables that are mapped to actual integer variables for use with FMI 2.0.
 Future FMI versions will directly support binary variables compatible with this concept.
 
 A notional binary variable named `<prefix>` is defined using the following conventions:
@@ -14,9 +14,9 @@ This restriction ensures that there is no conflict between notional binary varia
 For each notional binary variable, three actual FMU integer variables shall be defined:
 
 `<prefix>.base.lo`::
-Lower, meaning least significant, 32-bit address part of the binary data buffer to be passed into or out of the model, cast into a signed 32-bit integer without changing the bit values.
+Lower, meaning the least significant, 32-bit address part of the binary data buffer to be passed into or out of the model, cast into a signed 32-bit integer without changing the bit values.
 `<prefix>.base.hi`::
-Higher, meaning most significant, 32-bit address part of the binary data buffer to be passed into or out of the model, cast into a signed 32-bit integer without changing the bit values.
+Higher, meaning the most significant, 32-bit address part of the binary data buffer to be passed into or out of the model, cast into a signed 32-bit integer without changing the bit values.
 Note that this variable is only used for 64-bit platforms.
 For 32-bit platforms, it shall still be present but will always be 0 to support FMUs with 32-bit and 64-bit implementations.
 `<prefix>.size`::
@@ -40,7 +40,7 @@ The three actual variables shall contain an annotation of the following form in 
 
 `<prefix>` is the prefix as defined above, and `@role` is either `base.lo`, `base.hi`, or `size`, depending on the variable.
 
-It is an error if there is not exactly one variable of each role for the same name.
+There is an error if there is not exactly one variable of each role for the same name.
 
 The MIME type given in `@mime-type` shall be a valid MIME type specification.
 
