@@ -40,7 +40,7 @@ The three actual variables shall contain an annotation of the following form in 
 
 `<prefix>` is the prefix as defined above, and `@role` is either `base.lo`, `base.hi`, or `size`, depending on the variable.
 
-There is an error if there is not exactly one variable of each role for the same name.
+It is an error if there is not exactly one variable of each role for the same name.
 
 The MIME type given in `@mime-type` shall be a valid MIME type specification.
 

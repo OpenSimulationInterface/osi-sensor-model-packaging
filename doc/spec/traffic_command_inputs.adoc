@@ -1,7 +1,7 @@
 = Traffic command inputs
 
 Traffic command inputs are present in traffic participant models.
-This makes it possible to control of the traffic participant behavior using scenario engines.
+This makes it possible to control the traffic participant behavior using scenario engines.
 
 **Prefix**
 
