@@ -1,12 +1,12 @@
 = Binary variables
 
-FMI 2.0 does not directly support the efficient exchange of arbitrary binary data between FMUs.
-OSMP therefore introduces the concept of notional binary variables that are mapped to actual integer variables for use with FMI 2.0.
+FMI 2.0 cite:[fmi2.0] does not directly support the efficient exchange of arbitrary binary data between FMUs.
+OSMP therefore introduces the concept of notional binary variables that are mapped to actual integer variables for use with FMI 2.0 cite:[fmi2.0].
 Future FMI versions will directly support binary variables compatible with this concept.
 
 A notional binary variable named `<prefix>` is defined using the following conventions:
 
-The name of the notional binary variable given by `<prefix>` shall be a valid structured name according to FMI 2.0.
+The name of the notional binary variable given by `<prefix>` shall be a valid structured name according to FMI 2.0 cite:[fmi2.0].
 
 The FMU shall not contain any other variable that is named `<prefix>`.
 This restriction ensures that there is no conflict between notional binary variables and actual variables.
