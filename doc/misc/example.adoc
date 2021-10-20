@@ -3,7 +3,7 @@
 The following example shows the content of a `modelDescription.xml` file that satisfies OSMP requirements.
 The example describes a sensor model FMU with one input, one output, and no additional features:
 
-[source,xml]
+[source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 <fmiModelDescription

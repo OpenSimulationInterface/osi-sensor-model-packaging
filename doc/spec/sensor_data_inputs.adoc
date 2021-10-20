@@ -4,7 +4,7 @@
 
 Sensor data inputs shall be named with the following prefix:
 
-[source]
+[source,protobuf]
 ----
 OSMPSensorDataIn
 ----

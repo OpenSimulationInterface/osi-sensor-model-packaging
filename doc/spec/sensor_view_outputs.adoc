@@ -4,7 +4,7 @@
 
 Sensor view outputs shall be named with the following prefix:
 
-[source]
+[source,protobuf]
 ----
 OSMPSensorViewOut
 ----

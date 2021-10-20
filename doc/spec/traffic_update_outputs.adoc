@@ -6,9 +6,9 @@ Traffic update outputs are present in traffic participant models.
 
 Traffic update outputs shall be named with the following prefix:
 
-[source]
+[source,protobuf]
 ----
-`OSMPTrafficUpdateOut`
+OSMPTrafficUpdateOut
 ----
 
 **Rules**

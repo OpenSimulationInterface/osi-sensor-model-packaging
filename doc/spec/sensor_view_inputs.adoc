@@ -4,7 +4,7 @@
 
 Sensor view inputs shall be named with the following prefix:
 
-[source]
+[source,protobuf]
 ----
 OSMPSensorViewIn
 ----

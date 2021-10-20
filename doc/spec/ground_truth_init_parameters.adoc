@@ -13,7 +13,7 @@ This allows a model to do expensive map calculations only once during initializa
 
 Ground truth initialization paramters shall be named with the following prefix:
 
-[source]
+[source,protobuf]
 ----
 OSMPGroundTruthInit
 ----

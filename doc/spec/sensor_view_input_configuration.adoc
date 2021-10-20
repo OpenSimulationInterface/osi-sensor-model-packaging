@@ -10,14 +10,14 @@ Before exiting initialization mode, the simulation environment then sets this co
 
 Sensor view input configurations shall be named with the following prefix:
 
-[source]
+[source,protobuf]
 ----
 OSMPSensorViewInConfig
 ----
 
 Sensor view input configuration requests shall be named with the following prefix:
 
-[source]
+[source,protobuf]
 ----
 OSMPSensorViewInConfigRequest
 ----

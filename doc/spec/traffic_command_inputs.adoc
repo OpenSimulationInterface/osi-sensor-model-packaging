@@ -7,9 +7,9 @@ This makes it possible to control the traffic participant behavior using scenari
 
 Traffic command inputs shall be named with the following prefix:
 
-[source]
+[source,protobuf]
 ----
-`OSMPTrafficCommandIn`
+OSMPTrafficCommandIn
 ----
 
 **Rules**
