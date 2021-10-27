@@ -30,7 +30,7 @@ Install `protobuf` 3.0.0:
 $ sudo apt-get install libprotobuf-dev protobuf-compiler
 ```
 
-##### Build and install example
+##### Build examples
 ```bash
 $ git clone https://github.com/OpenSimulationInterface/osi-sensor-model-packaging.git
 $ cd osi-sensor-model-packaging
@@ -39,6 +39,5 @@ $ cd examples
 $ mkdir -p build
 $ cd build
 $ cmake ..
-$ make
-$ sudo make install
+$ cmake --build .
 ```
