@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/Modules/")
+set(BUILD_FLATBUFFER ON CACHE BOOLEAN "Build flatbuffer versions of libraries")
 
 # Set a default build type if none was specified
 set(default_build_type "Release")
@@ -28,4 +29,6 @@ set(OSIVERSION "${OSI_VERSION_MAJOR}.${OSI_VERSION_MINOR}.${OSI_VERSION_PATCH}")
 include_directories( includes )
 add_subdirectory( OSMPDummySensor )
 add_subdirectory( OSMPDummySource )
-add_subdirectory( OSMPCNetworkProxy )
+#add_subdirectory( OSMPCNetworkProxy )
+#add_subdirectory( object-based-generic-perception-object-model )
+#add_subdirectory( reflection-based-lidar-object-model )

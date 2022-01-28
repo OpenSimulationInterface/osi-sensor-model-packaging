@@ -44,15 +44,25 @@
 #endif
 
 #include <iostream>
-#include <string>
+//#include <string>
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <sstream>  //included for windows compatibility
 
 using namespace std;
 
 #ifdef PRIVATE_LOG_PATH
 ofstream COSMPDummySource::private_log_file;
+#endif
+
+#ifdef _WIN32
+std::string fileName = "C:/tmp/OSMPDummySource_flatbuf_timing";
+#else
+std::string fileName = "/tmp/OSMPDummySource_flatbuf_timing";
 #endif
 
 /*
@@ -89,9 +99,11 @@ void encode_pointer_to_integer(const void* ptr,fmi2Integer& hi,fmi2Integer& lo)
         } base;
         unsigned long long address;
     } myaddr;
+
     myaddr.address=reinterpret_cast<unsigned long long>(ptr);
     hi=myaddr.base.hi;
     lo=myaddr.base.lo;
+
 #elif PTRDIFF_MAX == INT32_MAX
     hi=0;
     lo=reinterpret_cast<int>(ptr);
@@ -100,13 +112,16 @@ void encode_pointer_to_integer(const void* ptr,fmi2Integer& hi,fmi2Integer& lo)
 #endif
 }
 
-void COSMPDummySource::set_fmi_sensor_view_out(const osi3::SensorView& data)
+//void COSMPDummySource::set_fmi_sensor_view_out(const osi3::SensorView& data)
+void COSMPDummySource::set_fmi_sensor_view_out()
 {
-    data.SerializeToString(currentBuffer);
-    encode_pointer_to_integer(currentBuffer->data(),integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX]);
-    integer_vars[FMI_INTEGER_SENSORVIEW_OUT_SIZE_IDX]=(fmi2Integer)currentBuffer->length();
-    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX],currentBuffer->data());
-    swap(currentBuffer,lastBuffer);
+    //data.SerializeToString(currentBuffer);
+    //encode_pointer_to_integer(currentBuffer->data(),integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX]);
+    encode_pointer_to_integer(currentBuffer.data(), integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX], integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX]);
+    integer_vars[FMI_INTEGER_SENSORVIEW_OUT_SIZE_IDX]=(fmi2Integer)currentBuffer.length();
+    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX],currentBuffer.data());
+    std::printf("Providing %08X %08X, writing from %p ...\n",integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX],currentBuffer.data());
+    //swap(currentBuffer,lastBuffer);
 }
 
 void COSMPDummySource::reset_fmi_sensor_view_out()
@@ -186,8 +201,7 @@ void rotatePoint(double x, double y, double z,double yaw,double pitch,double rol
 fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint)
 {
     DEBUGBREAK();
-
-    osi3::SensorView currentOut;
+    flatbuffers::FlatBufferBuilder builder(1024);
     double time = currentCommunicationPoint+communicationStepSize;
 
     normal_log("OSI","Calculating SensorView at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
@@ -196,63 +210,93 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     static double source_y_offsets[10] = { 3.0, 3.0, 3.0, 0.25, 0, -0.25, -3.0, -3.0, -3.0, -3.0 };
     static double source_x_offsets[10] = { 0.0, 40.0, 100.0, 100.0, 0.0, 150.0, 5.0, 45.0, 85.0, 125.0 };
     static double source_x_speeds[10] = { 29.0, 30.0, 31.0, 25.0, 26.0, 28.0, 20.0, 22.0, 22.5, 23.0 };
-    static osi3::MovingObject_VehicleClassification_Type source_veh_types[10] = {
-        osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_COMPACT_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_DELIVERY_VAN,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_COMPACT_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_BUS };
+    static osi3::MovingObject_::VehicleClassification_::Type source_veh_types[10] = {
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_MEDIUM_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_SMALL_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_COMPACT_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_DELIVERY_VAN,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_LUXURY_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_MEDIUM_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_COMPACT_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_SMALL_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_MOTORBIKE,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_BUS };
 
-    currentOut.Clear();
-    currentOut.mutable_version()->CopyFrom(osi3::InterfaceVersion::descriptor()->file()->options().GetExtension(osi3::current_interface_version));
-    currentOut.mutable_sensor_id()->set_value(10000);
-    currentOut.mutable_host_vehicle_id()->set_value(14);
-    osi3::GroundTruth *currentGT = currentOut.mutable_global_ground_truth();
-    currentOut.mutable_timestamp()->set_seconds((long long int)floor(time));
-    currentOut.mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
-    currentGT->mutable_timestamp()->set_seconds((long long int)floor(time));
-    currentGT->mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
-    currentGT->mutable_host_vehicle_id()->set_value(14);
-
+    std::vector<flatbuffers::Offset<osi3::MovingObject>> moving_object_vector;
     // Vehicles
     for (unsigned int i=0;i<10;i++) {
-        osi3::MovingObject *veh = currentGT->add_moving_object();
-        veh->mutable_id()->set_value(10+i);
-        veh->set_type(osi3::MovingObject_Type_TYPE_VEHICLE);
-        auto vehclass = veh->mutable_vehicle_classification();
-        vehclass->set_type(source_veh_types[i]);
-        auto vehlights = vehclass->mutable_light_state();
-        vehlights->set_indicator_state(osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_OFF);
-        vehlights->set_brake_light_state(osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_OFF);
-        veh->mutable_base()->mutable_dimension()->set_height(1.5);
-        veh->mutable_base()->mutable_dimension()->set_width(2.0);
-        veh->mutable_base()->mutable_dimension()->set_length(5.0);
-        veh->mutable_base()->mutable_position()->set_x(source_x_offsets[i]+time*source_x_speeds[i]);
-        veh->mutable_base()->mutable_position()->set_y(source_y_offsets[i]+sin(time/source_x_speeds[i])*0.25);
-        veh->mutable_base()->mutable_position()->set_z(0.0);
-        veh->mutable_base()->mutable_velocity()->set_x(source_x_speeds[i]);
-        veh->mutable_base()->mutable_velocity()->set_y(cos(time/source_x_speeds[i])*0.25/source_x_speeds[i]);
-        veh->mutable_base()->mutable_velocity()->set_z(0.0);
-        veh->mutable_base()->mutable_acceleration()->set_x(0.0);
-        veh->mutable_base()->mutable_acceleration()->set_y(-sin(time/source_x_speeds[i])*0.25/(source_x_speeds[i]*source_x_speeds[i]));
-        veh->mutable_base()->mutable_acceleration()->set_z(0.0);
-        veh->mutable_base()->mutable_orientation()->set_pitch(0.0);
-        veh->mutable_base()->mutable_orientation()->set_roll(0.0);
-        veh->mutable_base()->mutable_orientation()->set_yaw(0.0);
-        veh->mutable_base()->mutable_orientation_rate()->set_pitch(0.0);
-        veh->mutable_base()->mutable_orientation_rate()->set_roll(0.0);
-        veh->mutable_base()->mutable_orientation_rate()->set_yaw(0.0);
-        normal_log("OSI","GT: Adding Vehicle %d[%llu] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)",i,veh->id().value(),veh->base().position().x(),veh->base().position().y(),veh->base().position().z(),veh->base().velocity().x(),veh->base().velocity().y(),veh->base().velocity().z());
-    }
+        osi3::IdentifierBuilder id_builder(builder);
+        id_builder.add_value(10+i);
+        auto moving_obj_id = id_builder.Finish();
 
-    set_fmi_sensor_view_out(currentOut);
+        osi3::MovingObject_::VehicleClassificationBuilder vehicle_classification_builder(builder);
+        //vehicle_classification_builder.add_type(source_veh_types[i]);     //todo: vehicle classifications are wrong in headers due to namespace conflict -> confused with moving object type
+        auto vehicle_classification = vehicle_classification_builder.Finish();
+
+        auto bbcenter_to_rear = osi3::CreateVector3d(builder, 1.0, 0.0, -0.3);
+        osi3::MovingObject_::VehicleAttributesBuilder vehicle_attributes_builder(builder);
+        vehicle_attributes_builder.add_bbcenter_to_rear(bbcenter_to_rear);
+        auto vehicle_attributes = vehicle_attributes_builder.Finish();
+
+        auto dimension = osi3::CreateDimension3d(builder, 5.0, 2.0, 1.5);
+        auto position = osi3::CreateVector3d(builder, source_x_offsets[i]+time*source_x_speeds[i], source_y_offsets[i]+sin(time/source_x_speeds[i])*0.25, 0.0);
+        auto velocity = osi3::CreateVector3d(builder, source_x_speeds[i], cos(time/source_x_speeds[i])*0.25/source_x_speeds[i], 0.0);
+        auto acceleration = osi3::CreateVector3d(builder, 0.0, -sin(time/source_x_speeds[i])*0.25/(source_x_speeds[i]*source_x_speeds[i]), 0.0);
+        auto orientation = osi3::CreateOrientation3d(builder, 0.0, 0.0, 0.0);
+        auto orientation_rate = osi3::CreateOrientation3d(builder, 0.0, 0.0, 0.0);
+        osi3::BaseMovingBuilder base_moving_builder(builder);
+        base_moving_builder.add_dimension(dimension);
+        base_moving_builder.add_position(position);
+        base_moving_builder.add_velocity(velocity);
+        base_moving_builder.add_acceleration(acceleration);
+        base_moving_builder.add_orientation(orientation);
+        base_moving_builder.add_orientation_rate(orientation_rate);
+        auto base_moving = base_moving_builder.Finish();
+
+        osi3::MovingObjectBuilder moving_object_builder(builder);
+        moving_object_builder.add_id(moving_obj_id);
+        //moving_object_builder.add_type(osi3::MovingObject_::Type::TYPE_VEHICLE);  //todo: vehicle types are wrong in headers due to namespace conflict -> stationary and moving are confused
+        moving_object_builder.add_vehicle_classification(vehicle_classification);
+        moving_object_builder.add_vehicle_attributes(vehicle_attributes);
+        moving_object_builder.add_base(base_moving);
+        auto current_moving_object = moving_object_builder.Finish();
+        moving_object_vector.push_back(current_moving_object);
+
+        auto moving_object = reinterpret_cast<osi3::MovingObject *>(builder.GetCurrentBufferPointer() + builder.GetSize() - current_moving_object.o);
+        normal_log("OSI","GT: Adding Vehicle %d[%llu] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)",i,moving_object->id()->value(),moving_object->base()->position()->x(),moving_object->base()->position()->y(),moving_object->base()->position()->z(),moving_object->base()->velocity()->x(),moving_object->base()->velocity()->y(),moving_object->base()->velocity()->z());
+    }
+    auto moving_object_flatvector = builder.CreateVector(moving_object_vector);
+
+    auto timestamp = osi3::CreateTimestamp(builder, (int64_t)floor(time), (int)((time - floor(time))*1000000000.0));
+    osi3::IdentifierBuilder host_vehicle_id_builder(builder);
+    host_vehicle_id_builder.add_value(14);
+    auto host_vehicle_id = host_vehicle_id_builder.Finish();
+    osi3::GroundTruthBuilder ground_truth_builder(builder);
+    ground_truth_builder.add_timestamp(timestamp);
+    ground_truth_builder.add_host_vehicle_id(host_vehicle_id);
+    ground_truth_builder.add_moving_object(moving_object_flatvector);
+    auto ground_truth = ground_truth_builder.Finish();
+
+    auto sensor_id = osi3::CreateIdentifier(builder, 10000);
+
+    osi3::SensorViewBuilder sensor_view_builder(builder);
+    //sensor_view_builder.add_version(osi3::InterfaceVersion::descriptor()->file()->options().GetExtension(osi3::current_interface_version));   //todo: the used Protobuf FileOptions do not exist in Flatbuffers
+    sensor_view_builder.add_sensor_id(sensor_id);
+    sensor_view_builder.add_host_vehicle_id(host_vehicle_id);
+    sensor_view_builder.add_timestamp(timestamp);
+    sensor_view_builder.add_global_ground_truth(ground_truth);
+    auto sensor_view = sensor_view_builder.Finish();
+
+    builder.Finish(sensor_view);
+    auto uint8_buffer = builder.GetBufferPointer();
+    auto size = builder.GetSize();
+    std::string tmp_buffer(reinterpret_cast<char const*>(uint8_buffer), size);
+    currentBuffer = tmp_buffer;
+
+    set_fmi_sensor_view_out();
     set_fmi_valid(true);
-    set_fmi_count(currentGT->moving_object_size());
+    set_fmi_count((int)moving_object_vector.size());
+
     return fmi2OK;
 }
 
@@ -280,8 +324,10 @@ COSMPDummySource::COSMPDummySource(fmi2String theinstanceName, fmi2Type thefmuTy
     visible(!!thevisible),
     loggingOn(!!theloggingOn)
 {
-    currentBuffer = new string();
-    lastBuffer = new string();
+    //currentBuffer = new string();
+    //currentBuffer = new uint8_t();
+    //lastBuffer = new string();
+    //lastBuffer = new uint8_t();
     loggingCategories.clear();
     loggingCategories.insert("FMI");
     loggingCategories.insert("OSMP");
@@ -290,8 +336,8 @@ COSMPDummySource::COSMPDummySource(fmi2String theinstanceName, fmi2Type thefmuTy
 
 COSMPDummySource::~COSMPDummySource()
 {
-    delete currentBuffer;
-    delete lastBuffer;
+    //delete currentBuffer;
+    //delete lastBuffer;
 }
 
 fmi2Status COSMPDummySource::SetDebugLogging(fmi2Boolean theloggingOn, size_t nCategories, const fmi2String categories[])
@@ -557,6 +603,14 @@ extern "C" {
     FMI2_Export fmi2Status fmi2Terminate(fmi2Component c)
     {
         COSMPDummySource* myc = (COSMPDummySource*)c;
+        std::ofstream logFile;
+        logFile.open(fileName, std::ios_base::app);
+        logFile << std::endl << "\t\t\t]" << std::endl;
+        logFile << "\t\t}" << std::endl;
+        logFile << "\t]" << std::endl;
+        logFile << "}" << std::endl;
+        logFile.close();
+
         return myc->Terminate();
     }
 

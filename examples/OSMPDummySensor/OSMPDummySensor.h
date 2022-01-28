@@ -82,8 +82,10 @@ using namespace std;
 
 #undef min
 #undef max
-#include "osi_sensorview.pb.h"
-#include "osi_sensordata.pb.h"
+#include "osi_sensorview_generated.h"
+#include "osi_sensordata_generated.h"
+#include "flatbuffers/reflection.h"
+#include "flatbuffers/util.h"
 
 /* FMU Class */
 class COSMPDummySensor {
@@ -204,10 +206,10 @@ protected:
     fmi2Real real_vars[FMI_REAL_VARS];
     string string_vars[FMI_STRING_VARS];
     bool simulation_started;
-    string* currentOutputBuffer;
-    string* lastOutputBuffer;
-    string* currentConfigRequestBuffer;
-    string* lastConfigRequestBuffer;
+    string currentOutputBuffer;
+    string lastOutputBuffer;
+    string currentConfigRequestBuffer;
+    string lastConfigRequestBuffer;
 
     /* Simple Accessors */
     fmi2Boolean fmi_valid() { return boolean_vars[FMI_BOOLEAN_VALID_IDX]; }
@@ -222,8 +224,9 @@ protected:
     bool get_fmi_sensor_view_config(osi3::SensorViewConfiguration& data);
     void set_fmi_sensor_view_config_request(const osi3::SensorViewConfiguration& data);
     void reset_fmi_sensor_view_config_request();
-    bool get_fmi_sensor_view_in(osi3::SensorView& data);
-    void set_fmi_sensor_data_out(const osi3::SensorData& data);
+    //bool get_fmi_sensor_view_in(osi3::SensorView& data);
+    const osi3::SensorView* get_fmi_sensor_view_in();
+    void set_fmi_sensor_data_out();
     void reset_fmi_sensor_data_out();
 
     /* Refreshing of Calculated Parameters */
