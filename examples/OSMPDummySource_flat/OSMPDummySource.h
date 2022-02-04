@@ -72,7 +72,7 @@ using namespace std;
 
 #undef min
 #undef max
-#include "osi_sensorview.pb.h"
+#include "osi_sensorview_generated.h"
 
 /* FMU Class */
 class COSMPDummySource {
@@ -192,16 +192,20 @@ protected:
     fmi2Integer integer_vars[FMI_INTEGER_VARS];
     fmi2Real real_vars[FMI_REAL_VARS];
     string string_vars[FMI_STRING_VARS];
-    string* currentBuffer;
-    string* lastBuffer;
+    //string* currentBuffer;
+    string currentBuffer;
+    //string* lastBuffer;
+    string lastBuffer;
 
-    /* Simple Accessors */
+            /* Simple Accessors */
     fmi2Boolean fmi_valid() { return boolean_vars[FMI_BOOLEAN_VALID_IDX]; }
     void set_fmi_valid(fmi2Boolean value) { boolean_vars[FMI_BOOLEAN_VALID_IDX]=value; }
     fmi2Integer fmi_count() { return integer_vars[FMI_INTEGER_COUNT_IDX]; }
     void set_fmi_count(fmi2Integer value) { integer_vars[FMI_INTEGER_COUNT_IDX]=value; }
 
     /* Protocol Buffer Accessors */
-    void set_fmi_sensor_view_out(const osi3::SensorView& data);
+    //void set_fmi_sensor_view_out(const osi3::SensorView& data);
+    void set_fmi_sensor_view_out();
     void reset_fmi_sensor_view_out();
+
 };

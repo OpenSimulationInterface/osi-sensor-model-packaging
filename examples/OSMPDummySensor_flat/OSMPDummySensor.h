@@ -8,12 +8,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "OSMPDummySourceConfig.h"
+#include "OSMPDummySensorConfig.h"
 
 using namespace std;
 
 #ifndef FMU_SHARED_OBJECT
-#define FMI2_FUNCTION_PREFIX OSMPDummySource_
+#define FMI2_FUNCTION_PREFIX OSMPDummySensor_
 #endif
 #include "fmi2Functions.h"
 
@@ -49,15 +49,25 @@ using namespace std;
 #define FMI_BOOLEAN_VARS (FMI_BOOLEAN_LAST_IDX+1)
 
 /* Integer Variables */
-#define FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX 0
-#define FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX 1
-#define FMI_INTEGER_SENSORVIEW_OUT_SIZE_IDX 2
-#define FMI_INTEGER_COUNT_IDX 3
+#define FMI_INTEGER_SENSORVIEW_IN_BASELO_IDX 0
+#define FMI_INTEGER_SENSORVIEW_IN_BASEHI_IDX 1
+#define FMI_INTEGER_SENSORVIEW_IN_SIZE_IDX 2
+#define FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX 3
+#define FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX 4
+#define FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX 5
+#define FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX 6
+#define FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASEHI_IDX 7
+#define FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_SIZE_IDX 8
+#define FMI_INTEGER_SENSORVIEW_CONFIG_BASELO_IDX 9
+#define FMI_INTEGER_SENSORVIEW_CONFIG_BASEHI_IDX 10
+#define FMI_INTEGER_SENSORVIEW_CONFIG_SIZE_IDX 11
+#define FMI_INTEGER_COUNT_IDX 12
 #define FMI_INTEGER_LAST_IDX FMI_INTEGER_COUNT_IDX
 #define FMI_INTEGER_VARS (FMI_INTEGER_LAST_IDX+1)
 
 /* Real Variables */
-#define FMI_REAL_LAST_IDX 0
+#define FMI_REAL_NOMINAL_RANGE_IDX 0
+#define FMI_REAL_LAST_IDX FMI_REAL_NOMINAL_RANGE_IDX
 #define FMI_REAL_VARS (FMI_REAL_LAST_IDX+1)
 
 /* String Variables */
@@ -72,14 +82,17 @@ using namespace std;
 
 #undef min
 #undef max
-#include "osi_sensorview.pb.h"
+#include "osi_sensorview_generated.h"
+#include "osi_sensordata_generated.h"
+#include "flatbuffers/reflection.h"
+#include "flatbuffers/util.h"
 
 /* FMU Class */
-class COSMPDummySource {
+class COSMPDummySensor {
 public:
     /* FMI2 Interface mapped to C++ */
-    COSMPDummySource(fmi2String theinstanceName, fmi2Type thefmuType, fmi2String thefmuGUID, fmi2String thefmuResourceLocation, const fmi2CallbackFunctions* thefunctions, fmi2Boolean thevisible, fmi2Boolean theloggingOn);
-    ~COSMPDummySource();
+    COSMPDummySensor(fmi2String theinstanceName, fmi2Type thefmuType, fmi2String thefmuGUID, fmi2String thefmuResourceLocation, const fmi2CallbackFunctions* thefunctions, fmi2Boolean thevisible, fmi2Boolean theloggingOn);
+    ~COSMPDummySensor();
     fmi2Status SetDebugLogging(fmi2Boolean theloggingOn,size_t nCategories, const fmi2String categories[]);
     static fmi2Component Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID, fmi2String fmuResourceLocation, const fmi2CallbackFunctions* functions, fmi2Boolean visible, fmi2Boolean loggingOn);
     fmi2Status SetupExperiment(fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime);
@@ -128,7 +141,7 @@ protected:
 #else
             vsnprintf(buffer, 1024, format, ap);
 #endif
-            private_log_file << "OSMPDummySource" << "::Global:FMI: " << buffer << endl;
+            private_log_file << "OSMPDummySensor" << "::Global:FMI: " << buffer << endl;
             private_log_file.flush();
         }
 #endif
@@ -148,7 +161,7 @@ protected:
         if (!private_log_file.is_open())
             private_log_file.open(PRIVATE_LOG_PATH, ios::out | ios::app);
         if (private_log_file.is_open()) {
-            private_log_file << "OSMPDummySource" << "::" << instanceName << "<" << ((void*)this) << ">:" << category << ": " << buffer << endl;
+            private_log_file << "OSMPDummySensor" << "::" << instanceName << "<" << ((void*)this) << ">:" << category << ": " << buffer << endl;
             private_log_file.flush();
         }
 #endif
@@ -192,16 +205,30 @@ protected:
     fmi2Integer integer_vars[FMI_INTEGER_VARS];
     fmi2Real real_vars[FMI_REAL_VARS];
     string string_vars[FMI_STRING_VARS];
-    string* currentBuffer;
-    string* lastBuffer;
+    bool simulation_started;
+    string currentOutputBuffer;
+    string lastOutputBuffer;
+    string currentConfigRequestBuffer;
+    string lastConfigRequestBuffer;
 
     /* Simple Accessors */
     fmi2Boolean fmi_valid() { return boolean_vars[FMI_BOOLEAN_VALID_IDX]; }
     void set_fmi_valid(fmi2Boolean value) { boolean_vars[FMI_BOOLEAN_VALID_IDX]=value; }
     fmi2Integer fmi_count() { return integer_vars[FMI_INTEGER_COUNT_IDX]; }
     void set_fmi_count(fmi2Integer value) { integer_vars[FMI_INTEGER_COUNT_IDX]=value; }
+    fmi2Real fmi_nominal_range() { return real_vars[FMI_REAL_NOMINAL_RANGE_IDX]; }
+    void set_fmi_nominal_range(fmi2Real value) { real_vars[FMI_REAL_NOMINAL_RANGE_IDX]=value; }
 
+    
     /* Protocol Buffer Accessors */
-    void set_fmi_sensor_view_out(const osi3::SensorView& data);
-    void reset_fmi_sensor_view_out();
+    bool get_fmi_sensor_view_config(osi3::SensorViewConfiguration& data);
+    void set_fmi_sensor_view_config_request(const osi3::SensorViewConfiguration& data);
+    void reset_fmi_sensor_view_config_request();
+    //bool get_fmi_sensor_view_in(osi3::SensorView& data);
+    const osi3::SensorView* get_fmi_sensor_view_in();
+    void set_fmi_sensor_data_out();
+    void reset_fmi_sensor_data_out();
+
+    /* Refreshing of Calculated Parameters */
+    void refresh_fmi_sensor_view_config_request();
 };
