@@ -192,9 +192,7 @@ protected:
     fmi2Integer integer_vars[FMI_INTEGER_VARS];
     fmi2Real real_vars[FMI_REAL_VARS];
     string string_vars[FMI_STRING_VARS];
-    //string* currentBuffer;
     string currentBuffer;
-    //string* lastBuffer;
     string lastBuffer;
 
             /* Simple Accessors */

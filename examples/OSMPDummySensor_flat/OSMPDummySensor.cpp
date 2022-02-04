@@ -170,7 +170,7 @@ void COSMPDummySensor::set_fmi_sensor_data_out()
     integer_vars[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX]=(fmi2Integer)currentOutputBuffer.length();
     normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX],currentOutputBuffer.data());
     std::printf("Providing %08X %08X, writing from %p ...\n",integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX],currentOutputBuffer.data());
-    //swap(currentOutputBuffer,lastOutputBuffer);
+    swap(currentOutputBuffer,lastOutputBuffer);
 }
 
 void COSMPDummySensor::reset_fmi_sensor_data_out()
