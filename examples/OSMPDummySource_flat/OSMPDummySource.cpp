@@ -198,12 +198,60 @@ void rotatePoint(double x, double y, double z,double yaw,double pitch,double rol
 fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint)
 {
     DEBUGBREAK();
+    std::chrono::milliseconds start_source_calc = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+
     flatbuffers::FlatBufferBuilder builder(1024);
     double time = currentCommunicationPoint+communicationStepSize;
 
     normal_log("OSI","Calculating SensorView at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
 
     /* We act as GroundTruth Source */
+
+    //// Lidar Reflections
+    auto mounting_pos_position = osi3::CreateVector3d(builder, 1.5205, 0.0, 1.232);
+    osi3::MountingPositionBuilder mounting_position_builder(builder);
+    mounting_position_builder.add_position(mounting_pos_position);
+    auto mounting_position = mounting_position_builder.Finish();
+
+    osi3::LidarSensorViewConfigurationBuilder lidar_sensor_view_configuration_builder(builder);
+    lidar_sensor_view_configuration_builder.add_field_of_view_horizontal(145.0 / 180 * M_PI);
+    lidar_sensor_view_configuration_builder.add_field_of_view_vertical(3.2 / 180 * M_PI);
+    lidar_sensor_view_configuration_builder.add_mounting_position(mounting_position);
+    auto lidar_sensor_view_configuration = lidar_sensor_view_configuration_builder.Finish();
+
+    int no_of_layers = 32;                  // the number of layers of every lidar front-end
+    double azimuth_fov = 360.0;             // Azimuth angle FoV in °
+    int rays_per_beam_vertical = 3;         // vertical super-sampling factor
+    int rays_per_beam_horizontal = 6;       // horizontal super-sampling factor
+    double beam_step_azimuth = 0.2;         // horizontal step-size per beam in degrees of VLP32 at 600 rpm (10 Hz) with VLP32's fixed firing_cycle of 55.296e^(-6) s
+    double max_emitted_signal_strength_in_dB = 10 * std::log10(0.5); // maximal emitted signal strength in dB
+    int rays_per_beam = rays_per_beam_vertical * rays_per_beam_horizontal;
+    double const_distance = 10.0;
+    double speed_of_light = 299792458.0;
+
+    std::vector<flatbuffers::Offset<osi3::LidarSensorView_::Reflection>> reflection_vector;
+    // Simulation of lower number of rays because of SET Level improvements
+    for (int elevation_idx = 0; elevation_idx < no_of_layers * rays_per_beam_vertical; elevation_idx++) {
+        for (int azimuth_idx = 0; azimuth_idx < azimuth_fov/beam_step_azimuth*rays_per_beam_horizontal*0.8; azimuth_idx++) {    //assume 80% of rays generate reflection
+            double attenuation = 1.0;
+            osi3::LidarSensorView_::ReflectionBuilder reflection_builder(builder);
+            reflection_builder.add_time_of_flight(const_distance * 2.0 / speed_of_light);
+            reflection_builder.add_signal_strength(max_emitted_signal_strength_in_dB + 10 * std::log10(attenuation) - 10 * std::log10(rays_per_beam));  // assuming equal distribution of beam power per ray
+            auto ray = reflection_builder.Finish();
+            reflection_vector.push_back(ray);
+        }
+    }
+
+    auto reflection_flat_vector = builder.CreateVector(reflection_vector);
+    osi3::LidarSensorViewBuilder lidar_sensor_view_builder(builder);
+    lidar_sensor_view_builder.add_view_configuration(lidar_sensor_view_configuration);
+    lidar_sensor_view_builder.add_reflection(reflection_flat_vector);
+    auto lidar_sensor_view = lidar_sensor_view_builder.Finish();
+    std::vector<flatbuffers::Offset<osi3::LidarSensorView>> lidar_sensor_view_vector;
+    lidar_sensor_view_vector.push_back(lidar_sensor_view);
+    auto lidar_sensor_view_flatvector = builder.CreateVector(lidar_sensor_view_vector);
+
+    //// Moving Objects
     static double source_y_offsets[10] = { 3.0, 3.0, 3.0, 0.25, 0, -0.25, -3.0, -3.0, -3.0, -3.0 };
     static double source_x_offsets[10] = { 0.0, 40.0, 100.0, 100.0, 0.0, 150.0, 5.0, 45.0, 85.0, 125.0 };
     static double source_x_speeds[10] = { 29.0, 30.0, 31.0, 25.0, 26.0, 28.0, 20.0, 22.0, 22.5, 23.0 };
@@ -220,7 +268,6 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
             osi3::MovingObject_::VehicleClassification_::Type::TYPE_BUS };
 
     std::vector<flatbuffers::Offset<osi3::MovingObject>> moving_object_vector;
-    // Vehicles
     for (unsigned int i=0;i<10;i++) {
         osi3::IdentifierBuilder id_builder(builder);
         id_builder.add_value(10+i);
@@ -282,7 +329,10 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     sensor_view_builder.add_host_vehicle_id(host_vehicle_id);
     sensor_view_builder.add_timestamp(timestamp);
     sensor_view_builder.add_global_ground_truth(ground_truth);
+    sensor_view_builder.add_lidar_sensor_view(lidar_sensor_view_flatvector);
     auto sensor_view = sensor_view_builder.Finish();
+
+    std::chrono::milliseconds startOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
 
     builder.Finish(sensor_view);
     auto uint8_buffer = builder.GetBufferPointer();
@@ -293,6 +343,60 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     set_fmi_sensor_view_out();
     set_fmi_valid(true);
     set_fmi_count((int)moving_object_vector.size());
+
+    std::chrono::milliseconds stopOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+
+    //// Performance logging
+    auto sensor_view_in = flatbuffers::GetRoot<osi3::SensorView>(uint8_buffer);
+    std::ifstream f(fileName.c_str());
+    bool fileExists = f.is_open();
+    f.close();
+
+    std::ofstream logFile;
+    if(!fileExists) {
+        auto now = std::chrono::system_clock::now();
+        auto in_time_t = std::chrono::system_clock::to_time_t(now);
+        std::stringstream time_string;
+        time_string << std::put_time(std::localtime(&in_time_t), "_%H-%M-%S.json");
+        fileName += time_string.str();
+        logFile.open (fileName, std::ios_base::app);
+        logFile << "{" << std::endl;
+        logFile << "\t\"Header\": {" << std::endl;
+        logFile << "\t\t\"OsiMessages\": [\"osi3::SensorView\", \"osi3::SensorData\"]," << std::endl;
+        logFile << "\t\t\"EventFields\": [\"EventId\", \"GlobalTime\", \"SimulationTime\", \"MessageId\", \"SizeValueReference\", \"MessageSize\"]," << std::endl;
+        logFile << "\t\t\"EventTypes\": [\"StartSourceCalc\", \"StartOSISerialize\", \"StopOSISerialize\", \"StartOSIDeserialize\", \"StopOSIDeserialize\"]," << std::endl;
+        logFile << "\t\t\"FormatVersion\": {" << std::endl;
+        logFile << "\t\t\t\"Major\": 1," << std::endl;
+        logFile << "\t\t\t\"Minor\": 0," << std::endl;
+        logFile << "\t\t\t\"Patch\": 0," << std::endl;
+        logFile << "\t\t\t\"PreRelease\": \"beta\"" << std::endl;
+        logFile << "\t\t}" << std::endl;
+        logFile << "\t}," << std::endl;
+        logFile << "\t\"Data\": [" << std::endl;
+        logFile << "\t\t{" << std::endl;
+        logFile << "\t\t\t\"Instance\": {" << std::endl;
+        logFile << "\t\t\t\t\"ModelIdentity\": " << "\"OSMPDummySource Flatbuf\"" << std::endl;
+        /*logFile << "\t\t\t\t\"ModelIdentity\": " << "\"OSMPDummySource Flatbuf\"" << "," << std::endl;
+        logFile << "\t\t\t\t\"OsiVersion\": {" << std::endl;
+        logFile << "\t\t\t\t\t\"version_major\": " << sensor_view_in->version()->version_major() << "," << std::endl;
+        logFile << "\t\t\t\t\t\"version_minor\": " << sensor_view_in->version()->version_minor() << "," << std::endl;
+        logFile << "\t\t\t\t\t\"version_patch\": " << sensor_view_in->version()->version_patch() << std::endl;
+        logFile << "\t\t\t\t}" << std::endl;*/
+        logFile << "\t\t\t}," << std::endl;
+        logFile << "\t\t\t\"OsiEvents\": [" << std::endl;
+    } else {
+        logFile.open (fileName, std::ios_base::app);
+    }
+
+    if(fileExists) {
+        logFile << "," <<  std::endl;
+    }
+    size_t sensorViewSize = builder.GetSize();
+    double osiSimTime = (double)sensor_view_in->global_ground_truth()->timestamp()->seconds() + (double)sensor_view_in->global_ground_truth()->timestamp()->nanos() * 0.000000001;
+    logFile << "\t\t\t\t[" << "0" << ", " << std::setprecision(13) << (double)start_source_calc.count()/1000.0 << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
+    logFile << "\t\t\t\t[" << "1" << ", " << std::setprecision(13) << (double)startOSISerialize.count()/1000.0 << ", " << osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
+    logFile << "\t\t\t\t[" << "2" << ", " << std::setprecision(13) << (double)stopOSISerialize.count()/1000.0 << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]";
+    logFile.close();
 
     return fmi2OK;
 }
@@ -322,9 +426,7 @@ COSMPDummySource::COSMPDummySource(fmi2String theinstanceName, fmi2Type thefmuTy
     loggingOn(!!theloggingOn)
 {
     //currentBuffer = new string();
-    //currentBuffer = new uint8_t();
     //lastBuffer = new string();
-    //lastBuffer = new uint8_t();
     loggingCategories.clear();
     loggingCategories.insert("FMI");
     loggingCategories.insert("OSMP");
