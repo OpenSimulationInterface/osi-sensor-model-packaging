@@ -10,6 +10,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
+#endif
+
 #include "OSMPDummySource.h"
 
 /*
@@ -49,11 +53,16 @@
 //#include <string>
 #include <algorithm>
 #include <cstdint>
-#include <cmath>
 #include <chrono>
 #include <ctime>
 #include <iomanip>
 #include <sstream>  //included for windows compatibility
+
+#ifdef _WIN32
+#include <math.h>
+#else
+#include <cmath>
+#endif
 
 using namespace std;
 

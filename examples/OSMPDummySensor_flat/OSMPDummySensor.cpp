@@ -10,6 +10,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
+#endif
+
 #include "OSMPDummySensor.h"
 
 /*
@@ -49,8 +53,13 @@
 #include <string>
 #include <algorithm>
 #include <cstdint>
-#include <cmath>
 #include <chrono>
+
+#ifdef _WIN32
+#include <math.h>
+#else
+#include <cmath>
+#endif
 
 using namespace std;
 
