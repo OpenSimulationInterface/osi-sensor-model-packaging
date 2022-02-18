@@ -44,15 +44,25 @@
 #endif
 
 #include <iostream>
-#include <string>
+//#include <string>
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <sstream>  //included for windows compatibility
 
 using namespace std;
 
 #ifdef PRIVATE_LOG_PATH
 ofstream COSMPDummySource::private_log_file;
+#endif
+
+#ifdef _WIN32
+std::string fileName = "C:/tmp/OSMPDummySource_Protobuf_timing";
+#else
+std::string fileName = "/tmp/OSMPDummySource_Protobuf_timing";
 #endif
 
 /*
@@ -106,6 +116,7 @@ void COSMPDummySource::set_fmi_sensor_view_out(const osi3::SensorView& data)
     encode_pointer_to_integer(currentBuffer->data(),integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX]);
     integer_vars[FMI_INTEGER_SENSORVIEW_OUT_SIZE_IDX]=(fmi2Integer)currentBuffer->length();
     normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX],currentBuffer->data());
+    std::printf("Providing %08X %08X, writing from %p ...\n",integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_OUT_BASELO_IDX],currentBuffer->data());
     swap(currentBuffer,lastBuffer);
 }
 
@@ -186,6 +197,7 @@ void rotatePoint(double x, double y, double z,double yaw,double pitch,double rol
 fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint)
 {
     DEBUGBREAK();
+    std::chrono::milliseconds start_source_calc = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
 
     osi3::SensorView currentOut;
     double time = currentCommunicationPoint+communicationStepSize;
@@ -193,20 +205,6 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     normal_log("OSI","Calculating SensorView at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
 
     /* We act as GroundTruth Source */
-    static double source_y_offsets[10] = { 3.0, 3.0, 3.0, 0.25, 0, -0.25, -3.0, -3.0, -3.0, -3.0 };
-    static double source_x_offsets[10] = { 0.0, 40.0, 100.0, 100.0, 0.0, 150.0, 5.0, 45.0, 85.0, 125.0 };
-    static double source_x_speeds[10] = { 29.0, 30.0, 31.0, 25.0, 26.0, 28.0, 20.0, 22.0, 22.5, 23.0 };
-    static osi3::MovingObject_VehicleClassification_Type source_veh_types[10] = {
-        osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_COMPACT_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_DELIVERY_VAN,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_COMPACT_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE,
-        osi3::MovingObject_VehicleClassification_Type_TYPE_BUS };
 
     currentOut.Clear();
     currentOut.mutable_version()->CopyFrom(osi3::InterfaceVersion::descriptor()->file()->options().GetExtension(osi3::current_interface_version));
@@ -219,7 +217,51 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     currentGT->mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
     currentGT->mutable_host_vehicle_id()->set_value(14);
 
-    // Vehicles
+    //// Lidar Reflections
+    auto lidar_sensor_view = currentOut.add_lidar_sensor_view();
+    auto lidar_sensor_view_configuration = lidar_sensor_view->mutable_view_configuration();
+    lidar_sensor_view_configuration->set_field_of_view_horizontal(145.0 / 180 * M_PI);
+    lidar_sensor_view_configuration->set_field_of_view_vertical(3.2 / 180 * M_PI);
+    lidar_sensor_view_configuration->mutable_mounting_position()->mutable_position()->set_x(1.5205); // from middle of rear axle, in m // 1.3705 + 0.15
+    lidar_sensor_view_configuration->mutable_mounting_position()->mutable_position()->set_y(0.0); // from middle of rear axle, in m
+    lidar_sensor_view_configuration->mutable_mounting_position()->mutable_position()->set_z(1.232);  // from middle of rear axle, in m // 0.382 + 0.85
+
+    int no_of_layers = 32;                  // the number of layers of every lidar front-end
+    double azimuth_fov = 360.0;             // Azimuth angle FoV in °
+    int rays_per_beam_vertical = 3;         // vertical super-sampling factor
+    int rays_per_beam_horizontal = 6;       // horizontal super-sampling factor
+    double beam_step_azimuth = 0.2;         // horizontal step-size per beam in degrees of VLP32 at 600 rpm (10 Hz) with VLP32's fixed firing_cycle of 55.296e^(-6) s
+    double max_emitted_signal_strength_in_dB = 10 * std::log10(0.5); // maximal emitted signal strength in dB
+    int rays_per_beam = rays_per_beam_vertical * rays_per_beam_horizontal;
+    double const_distance = 10.0;
+    double speed_of_light = 299792458.0;
+
+    // Simulation of lower number of rays because of SET Level improvements
+    for (int elevation_idx = 0; elevation_idx < no_of_layers * rays_per_beam_vertical; elevation_idx++) {
+        for (int azimuth_idx = 0; azimuth_idx < azimuth_fov/beam_step_azimuth*rays_per_beam_horizontal*0.8; azimuth_idx++) {    //assume 80% of rays generate reflection
+            double attenuation = 1.0;
+            auto ray = lidar_sensor_view->add_reflection();
+            ray->set_time_of_flight(const_distance * 2.0 / speed_of_light);
+            ray->set_signal_strength(max_emitted_signal_strength_in_dB + 10 * std::log10(attenuation) - 10 * std::log10(rays_per_beam)); // assuming equal distribution of beam power per ray
+        }
+    }
+
+    //// Moving Objects
+    static double source_y_offsets[10] = { 3.0, 3.0, 3.0, 0.25, 0, -0.25, -3.0, -3.0, -3.0, -3.0 };
+    static double source_x_offsets[10] = { 0.0, 40.0, 100.0, 100.0, 0.0, 150.0, 5.0, 45.0, 85.0, 125.0 };
+    static double source_x_speeds[10] = { 29.0, 30.0, 31.0, 25.0, 26.0, 28.0, 20.0, 22.0, 22.5, 23.0 };
+    static osi3::MovingObject_VehicleClassification_Type source_veh_types[10] = {
+            osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR,
+            osi3::MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR,
+            osi3::MovingObject_VehicleClassification_Type_TYPE_COMPACT_CAR,
+            osi3::MovingObject_VehicleClassification_Type_TYPE_DELIVERY_VAN,
+            osi3::MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR,
+            osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR,
+            osi3::MovingObject_VehicleClassification_Type_TYPE_COMPACT_CAR,
+            osi3::MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR,
+            osi3::MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE,
+            osi3::MovingObject_VehicleClassification_Type_TYPE_BUS };
+
     for (unsigned int i=0;i<10;i++) {
         osi3::MovingObject *veh = currentGT->add_moving_object();
         veh->mutable_id()->set_value(10+i);
@@ -229,6 +271,9 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         auto vehlights = vehclass->mutable_light_state();
         vehlights->set_indicator_state(osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_OFF);
         vehlights->set_brake_light_state(osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_OFF);
+        veh->mutable_vehicle_attributes()->mutable_bbcenter_to_rear()->set_x(1);
+        veh->mutable_vehicle_attributes()->mutable_bbcenter_to_rear()->set_y(0);
+        veh->mutable_vehicle_attributes()->mutable_bbcenter_to_rear()->set_x(-0.3);
         veh->mutable_base()->mutable_dimension()->set_height(1.5);
         veh->mutable_base()->mutable_dimension()->set_width(2.0);
         veh->mutable_base()->mutable_dimension()->set_length(5.0);
@@ -250,9 +295,66 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         normal_log("OSI","GT: Adding Vehicle %d[%llu] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)",i,veh->id().value(),veh->base().position().x(),veh->base().position().y(),veh->base().position().z(),veh->base().velocity().x(),veh->base().velocity().y(),veh->base().velocity().z());
     }
 
+    std::cout << "DummySource time doCalc(): " << time << std::endl;
+
+    //check if file exists
+    std::ifstream f(fileName.c_str());
+    bool fileExists = f.is_open();
+    f.close();
+
+    std::ofstream logFile;
+    if(!fileExists) {
+        auto now = std::chrono::system_clock::now();
+        auto in_time_t = std::chrono::system_clock::to_time_t(now);
+        std::stringstream time_string;
+        time_string << std::put_time(std::localtime(&in_time_t), "_%H-%M-%S.json");
+        fileName += time_string.str();
+        logFile.open (fileName, std::ios_base::app);
+        logFile << "{" << std::endl;
+        logFile << "\t\"Header\": {" << std::endl;
+        logFile << "\t\t\"OsiMessages\": [\"osi3::SensorView\", \"osi3::SensorData\"]," << std::endl;
+        logFile << "\t\t\"EventFields\": [\"EventId\", \"GlobalTime\", \"SimulationTime\", \"MessageId\", \"SizeValueReference\", \"MessageSize\"]," << std::endl;
+        logFile << "\t\t\"EventTypes\": [\"StartSourceCalc\", \"StartOSISerialize\", \"StopOSISerialize\", \"StartOSIDeserialize\", \"StopOSIDeserialize\"]," << std::endl;
+        logFile << "\t\t\"FormatVersion\": {" << std::endl;
+        logFile << "\t\t\t\"Major\": 1," << std::endl;
+        logFile << "\t\t\t\"Minor\": 0," << std::endl;
+        logFile << "\t\t\t\"Patch\": 0," << std::endl;
+        logFile << "\t\t\t\"PreRelease\": \"beta\"" << std::endl;
+        logFile << "\t\t}" << std::endl;
+        logFile << "\t}," << std::endl;
+        logFile << "\t\"Data\": [" << std::endl;
+        logFile << "\t\t{" << std::endl;
+        logFile << "\t\t\t\"Instance\": {" << std::endl;
+        logFile << "\t\t\t\t\"ModelIdentity\": " << "\"OSMPDummySource Protobuf\"" << "," << std::endl;
+        logFile << "\t\t\t\t\"OsiVersion\": {" << std::endl;
+        logFile << "\t\t\t\t\t\"version_major\": "<< currentOut.version().version_major() << "," << std::endl;
+        logFile << "\t\t\t\t\t\"version_minor\": "<< currentOut.version().version_minor() << "," << std::endl;
+        logFile << "\t\t\t\t\t\"version_patch\": "<< currentOut.version().version_patch() << std::endl;
+        logFile << "\t\t\t\t}" << std::endl;
+        logFile << "\t\t\t}," << std::endl;
+        logFile << "\t\t\t\"OsiEvents\": [" << std::endl;
+    } else {
+        logFile.open (fileName, std::ios_base::app);
+    }
+
+    float osiSimTime = currentOut.global_ground_truth().timestamp().seconds() + (float)currentOut.global_ground_truth().timestamp().nanos() * 0.000000001;
+
+    std::chrono::milliseconds startOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+
     set_fmi_sensor_view_out(currentOut);
     set_fmi_valid(true);
     set_fmi_count(currentGT->moving_object_size());
+    std::chrono::milliseconds stopOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+
+    if(fileExists) {
+        logFile << "," <<  std::endl;
+    }
+    int sensorViewSize = currentOut.ByteSize();
+    logFile << "\t\t\t\t[" << "0" << ", " << std::setprecision(13) << (double)start_source_calc.count()/1000.0 << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
+    logFile << "\t\t\t\t[" << "1" << ", " << std::setprecision(13) << (double)startOSISerialize.count()/1000.0 << ", " << osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
+    logFile << "\t\t\t\t[" << "2" << ", " << std::setprecision(13) << (double)stopOSISerialize.count()/1000.0 << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]";
+    logFile.close();
+
     return fmi2OK;
 }
 
@@ -557,6 +659,14 @@ extern "C" {
     FMI2_Export fmi2Status fmi2Terminate(fmi2Component c)
     {
         COSMPDummySource* myc = (COSMPDummySource*)c;
+        std::ofstream logFile;
+        logFile.open(fileName, std::ios_base::app);
+        logFile << std::endl << "\t\t\t]" << std::endl;
+        logFile << "\t\t}" << std::endl;
+        logFile << "\t]" << std::endl;
+        logFile << "}" << std::endl;
+        logFile.close();
+
         return myc->Terminate();
     }
 

@@ -48,11 +48,21 @@
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <sstream>  //included for windows compatibility
 
 using namespace std;
 
 #ifdef PRIVATE_LOG_PATH
 ofstream COSMPDummySensor::private_log_file;
+#endif
+
+#ifdef _WIN32
+std::string fileName = "C:/tmp/OSMPDummySensor_Protobuf_timing";
+#else
+std::string fileName = "/tmp/OSMPDummySensor_Protobuf_timing";
 #endif
 
 /*
@@ -133,6 +143,7 @@ bool COSMPDummySensor::get_fmi_sensor_view_in(osi3::SensorView& data)
     if (integer_vars[FMI_INTEGER_SENSORVIEW_IN_SIZE_IDX] > 0) {
         void* buffer = decode_integer_to_pointer(integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASELO_IDX]);
         normal_log("OSMP","Got %08X %08X, reading from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASELO_IDX],buffer);
+        std::printf("Got %08X %08X, reading from %p ...\n",integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASELO_IDX],buffer);
         data.ParseFromArray(buffer,integer_vars[FMI_INTEGER_SENSORVIEW_IN_SIZE_IDX]);
         return true;
     } else {
@@ -263,7 +274,41 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     osi3::SensorData currentOut;
     double time = currentCommunicationPoint+communicationStepSize;
     normal_log("OSI","Calculating Sensor at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
+    std::chrono::milliseconds startOSIDeserialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
     if (get_fmi_sensor_view_in(currentIn)) {
+        std::chrono::milliseconds stopOSIDeserialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+        //// Lidar Detections
+        if (currentIn.lidar_sensor_view_size() > 0) {
+            auto lidar_sensor = currentOut.mutable_feature_data()->add_lidar_sensor();
+            int no_of_layers = 32;                  // the number of layers of every lidar front-end
+            double azimuth_fov = 360.0;             // Azimuth angle FoV in °
+            int rays_per_beam_vertical = 3;         // vertical super-sampling factor
+            int rays_per_beam_horizontal = 6;       // horizontal super-sampling factor
+            double beam_step_azimuth = 0.2;         // horizontal step-size per beam in degrees of VLP32 at 600 rpm (10 Hz) with VLP32's fixed firing_cycle of 55.296e^(-6) s
+            double beam_step_elevation = 0.3;       // simplified equidistant beam spacing
+            double max_emitted_signal_strength_in_dB = 10 * std::log10(0.5); // maximal emitted signal strength in dB
+            int rays_per_layer = azimuth_fov/beam_step_azimuth*rays_per_beam_horizontal*0.8;
+            double const_distance = 10.0;
+            double speed_of_light = 299792458.0;
+            size_t num_reflections = currentIn.lidar_sensor_view(0).reflection_size();
+            int layer_idx = -1;
+            for (int reflection_idx = 0; reflection_idx < num_reflections; reflection_idx++) {
+                if ((reflection_idx % rays_per_layer) == 0) layer_idx++;
+                auto current_reflection = currentIn.lidar_sensor_view(0).reflection(reflection_idx);
+                if (reflection_idx % 18 == 0) {     //18 times super-sampling
+                    //todo: generate lidar detection
+                    double distance = current_reflection.time_of_flight() * speed_of_light / 2;
+                    double azimuth_deg = double(reflection_idx % rays_per_layer) * beam_step_azimuth;
+                    double elevation_deg = layer_idx * beam_step_elevation - 5;     //start at -5° for simplification
+                    auto current_detection = lidar_sensor->add_detection();
+                    current_detection->mutable_position()->set_distance(distance);
+                    current_detection->mutable_position()->set_azimuth(azimuth_deg*M_PI/180);
+                    current_detection->mutable_position()->set_elevation(elevation_deg*M_PI/180);
+                }
+            }
+        }
+
+        //// Moving Objects
         double ego_x=0, ego_y=0, ego_z=0;
         osi3::Identifier ego_id = currentIn.global_ground_truth().host_vehicle_id();
         normal_log("OSI","Looking for EgoVehicle with ID: %llu",ego_id.value());
@@ -333,10 +378,66 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
                 }
             });
         normal_log("OSI","Mapped %d vehicles to output", i);
+
         /* Serialize */
+        std::chrono::milliseconds startOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
         set_fmi_sensor_data_out(currentOut);
         set_fmi_valid(true);
         set_fmi_count(currentOut.moving_object_size());
+        std::chrono::milliseconds stopOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+
+        //Performance logging
+        std::ifstream f(fileName.c_str());
+        bool fileExists = f.is_open();
+        f.close();
+
+        std::ofstream logFile;
+        if(!fileExists) {
+            auto now = std::chrono::system_clock::now();
+            auto in_time_t = std::chrono::system_clock::to_time_t(now);
+            std::stringstream time_string;
+            time_string << std::put_time(std::localtime(&in_time_t), "_%H-%M-%S.json");
+            fileName += time_string.str();
+            logFile.open (fileName, std::ios_base::app);
+            logFile << "{" << std::endl;
+            logFile << "\t\"Header\": {" << std::endl;
+            logFile << "\t\t\"OsiMessages\": [\"osi3::SensorView\", \"osi3::SensorData\"]," << std::endl;
+            logFile << "\t\t\"EventFields\": [\"EventId\", \"GlobalTime\", \"SimulationTime\", \"MessageId\", \"SizeValueReference\", \"MessageSize\"]," << std::endl;
+            logFile << "\t\t\"EventTypes\": [\"StartOSISerialize\", \"StopOSISerialize\", \"StartOSIDeserialize\", \"StopOSIDeserialize\"]," << std::endl;
+            logFile << "\t\t\"FormatVersion\": {" << std::endl;
+            logFile << "\t\t\t\"Major\": 1," << std::endl;
+            logFile << "\t\t\t\"Minor\": 0," << std::endl;
+            logFile << "\t\t\t\"Patch\": 0," << std::endl;
+            logFile << "\t\t\t\"PreRelease\": \"beta\"" << std::endl;
+            logFile << "\t\t}" << std::endl;
+            logFile << "\t}," << std::endl;
+            logFile << "\t\"Data\": [" << std::endl;
+            logFile << "\t\t{" << std::endl;
+            logFile << "\t\t\t\"Instance\": {" << std::endl;
+            logFile << "\t\t\t\t\"ModelIdentity\": " << "\"OSMPDummySensor Protobuf\"" << std::endl;
+            /*logFile << "\t\t\t\t\"ModelIdentity\": " << "\"OSMPDummySensor Protobuf\"" << "," << std::endl;
+            logFile << "\t\t\t\t\"OsiVersion\": {" << std::endl;
+            logFile << "\t\t\t\t\t\"version_major\": " << sensor_view_in->version()->version_major() << "," << std::endl;
+            logFile << "\t\t\t\t\t\"version_minor\": " << sensor_view_in->version()->version_minor() << "," << std::endl;
+            logFile << "\t\t\t\t\t\"version_patch\": " << sensor_view_in->version()->version_patch() << std::endl;*
+            logFile << "\t\t\t\t}" << std::endl;*/
+            logFile << "\t\t\t}," << std::endl;
+            logFile << "\t\t\t\"OsiEvents\": [" << std::endl;
+        } else {
+            logFile.open (fileName, std::ios_base::app);
+        }
+
+        if(fileExists) {
+            logFile << "," <<  std::endl;
+        }
+        size_t sensorDataSize = currentOut.ByteSize();
+        double osiSimTime = (double)currentOut.timestamp().seconds() + (float)currentOut.timestamp().nanos() * 0.000000001;
+        logFile << "\t\t\t\t[" << "2" << ", " << std::setprecision(13) << (double)startOSIDeserialize.count()/1000.0 << ", " << osiSimTime << ", " << "0" << ", " << "2" << ", " << 999 << "]," << std::endl;   //todo: sensor view size
+        logFile << "\t\t\t\t[" << "3" << ", " << std::setprecision(13) << (double)stopOSIDeserialize.count()/1000.0 << ", " <<  osiSimTime << ", " << "0" << ", " << "2" << ", " << 999 << "]," << std::endl;
+        logFile << "\t\t\t\t[" << "0" << ", " << std::setprecision(13) << (double)startOSISerialize.count()/1000.0 << ", " << osiSimTime << ", " << "1" <<  ", " << "5" << ", " << sensorDataSize << "]," <<  std::endl;
+        logFile << "\t\t\t\t[" << "1" << ", " << std::setprecision(13) << (double)stopOSISerialize.count()/1000.0 << ", " <<  osiSimTime << ", " << "1" <<  ", " << "5" << ", " << sensorDataSize << "]";
+        logFile.close();
+
     } else {
         /* We have no valid input, so no valid output */
         normal_log("OSI","No valid input, therefore providing no valid output.");
@@ -661,6 +762,13 @@ extern "C" {
     FMI2_Export fmi2Status fmi2Terminate(fmi2Component c)
     {
         COSMPDummySensor* myc = (COSMPDummySensor*)c;
+        std::ofstream logFile;
+        logFile.open(fileName, std::ios_base::app);
+        logFile << std::endl << "\t\t\t]" << std::endl;
+        logFile << "\t\t}" << std::endl;
+        logFile << "\t]" << std::endl;
+        logFile << "}" << std::endl;
+        logFile.close();
         return myc->Terminate();
     }
 
