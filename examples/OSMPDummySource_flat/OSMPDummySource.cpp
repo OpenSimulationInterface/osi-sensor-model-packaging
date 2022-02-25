@@ -52,6 +52,7 @@
 #include <ctime>
 #include <iomanip>
 #include <sstream>  //included for windows compatibility
+#include <memory>
 
 using namespace std;
 
@@ -201,23 +202,46 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     std::chrono::milliseconds start_source_calc = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
 
     flatbuffers::FlatBufferBuilder builder(1024);
+    osi3::SensorViewT currentOut;
     double time = currentCommunicationPoint+communicationStepSize;
 
     normal_log("OSI","Calculating SensorView at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
 
     /* We act as GroundTruth Source */
 
-    //// Lidar Reflections
-    auto mounting_pos_position = osi3::CreateVector3d(builder, 1.5205, 0.0, 1.232);
-    osi3::MountingPositionBuilder mounting_position_builder(builder);
-    mounting_position_builder.add_position(mounting_pos_position);
-    auto mounting_position = mounting_position_builder.Finish();
+    //currentOut.mutable_version->CopyFrom(osi3::InterfaceVersion::descriptor->file->options->GetExtension(osi3::current_interface_version));
+    auto sensor_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
+    sensor_id->value = 1000;
+    currentOut.sensor_id = std::move(sensor_id);
+    auto host_vehicle_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
+    host_vehicle_id->value = 14;
+    currentOut.host_vehicle_id = std::move(host_vehicle_id);
+    auto timestamp = std::unique_ptr<osi3::TimestampT>(new osi3::TimestampT());
+    timestamp->seconds = (long long int)floor(time);
+    timestamp->nanos = (int)((time - floor(time))*1000000000.0);
+    currentOut.timestamp = std::move(timestamp);
+    auto currentGT = std::unique_ptr<osi3::GroundTruthT>(new osi3::GroundTruthT());
+    auto gt_timestamp = std::unique_ptr<osi3::TimestampT>(new osi3::TimestampT());
+    gt_timestamp->seconds = (long long int)floor(time);
+    gt_timestamp->nanos = (int)((time - floor(time))*1000000000.0);
+    currentGT->timestamp = std::move(gt_timestamp);
+    auto gt_host_vehicle_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
+    gt_host_vehicle_id->value = 14;
+    currentGT->host_vehicle_id = std::move(gt_host_vehicle_id);
 
-    osi3::LidarSensorViewConfigurationBuilder lidar_sensor_view_configuration_builder(builder);
-    lidar_sensor_view_configuration_builder.add_field_of_view_horizontal(145.0 / 180 * M_PI);
-    lidar_sensor_view_configuration_builder.add_field_of_view_vertical(3.2 / 180 * M_PI);
-    lidar_sensor_view_configuration_builder.add_mounting_position(mounting_position);
-    auto lidar_sensor_view_configuration = lidar_sensor_view_configuration_builder.Finish();
+    //// Lidar Reflections
+    auto lidar_sensor_view = std::unique_ptr<osi3::LidarSensorViewT>(new osi3::LidarSensorViewT());
+    auto view_configuration = std::unique_ptr<osi3::LidarSensorViewConfigurationT>(new osi3::LidarSensorViewConfigurationT());
+    view_configuration->field_of_view_horizontal = 145.0 / 180 * M_PI;
+    view_configuration->field_of_view_vertical = 3.2 / 180 * M_PI;
+    auto mounting_position = std::unique_ptr<osi3::MountingPositionT>(new osi3::MountingPositionT());
+    auto position = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
+    position->x = 1.5205; // from middle of rear axle, in m // 1.3705 + 0.15
+    position->y = 0.0; // from middle of rear axle, in m
+    position->z = 1.232;  // from middle of rear axle, in m // 0.382 + 0.85
+    mounting_position->position = std::move(position);
+    view_configuration->mounting_position = std::move(mounting_position);
+    lidar_sensor_view->view_configuration = std::move(view_configuration);
 
     int no_of_layers = 32;                  // the number of layers of every lidar front-end
     double azimuth_fov = 360.0;             // Azimuth angle FoV in °
@@ -229,27 +253,18 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     double const_distance = 10.0;
     double speed_of_light = 299792458.0;
 
-    std::vector<flatbuffers::Offset<osi3::LidarSensorView_::Reflection>> reflection_vector;
     // Simulation of lower number of rays because of SET Level improvements
     for (int elevation_idx = 0; elevation_idx < no_of_layers * rays_per_beam_vertical; elevation_idx++) {
         for (int azimuth_idx = 0; azimuth_idx < azimuth_fov/beam_step_azimuth*rays_per_beam_horizontal*0.8; azimuth_idx++) {    //assume 80% of rays generate reflection
             double attenuation = 1.0;
-            osi3::LidarSensorView_::ReflectionBuilder reflection_builder(builder);
-            reflection_builder.add_time_of_flight(const_distance * 2.0 / speed_of_light);
-            reflection_builder.add_signal_strength(max_emitted_signal_strength_in_dB + 10 * std::log10(attenuation) - 10 * std::log10(rays_per_beam));  // assuming equal distribution of beam power per ray
-            auto ray = reflection_builder.Finish();
-            reflection_vector.push_back(ray);
+            auto ray = std::unique_ptr<osi3::LidarSensorView_::ReflectionT>(new osi3::LidarSensorView_::ReflectionT());
+            ray->time_of_flight = const_distance * 2.0 / speed_of_light;
+            ray->signal_strength = max_emitted_signal_strength_in_dB + 10 * std::log10(attenuation) - 10 * std::log10(rays_per_beam); // assuming equal distribution of beam power per ray
+            lidar_sensor_view->reflection.push_back(std::move(ray));
         }
     }
-
-    auto reflection_flat_vector = builder.CreateVector(reflection_vector);
-    osi3::LidarSensorViewBuilder lidar_sensor_view_builder(builder);
-    lidar_sensor_view_builder.add_view_configuration(lidar_sensor_view_configuration);
-    lidar_sensor_view_builder.add_reflection(reflection_flat_vector);
-    auto lidar_sensor_view = lidar_sensor_view_builder.Finish();
-    std::vector<flatbuffers::Offset<osi3::LidarSensorView>> lidar_sensor_view_vector;
-    lidar_sensor_view_vector.push_back(lidar_sensor_view);
-    auto lidar_sensor_view_flatvector = builder.CreateVector(lidar_sensor_view_vector);
+    //currentOut.lidar_sensor_view.push_back(std::unique_ptr<osi3::LidarSensorViewT>(&lidar_sensor_view));
+    currentOut.lidar_sensor_view.push_back(std::move(lidar_sensor_view));
 
     //// Moving Objects
     static double source_y_offsets[10] = { 3.0, 3.0, 3.0, 0.25, 0, -0.25, -3.0, -3.0, -3.0, -3.0 };
@@ -267,87 +282,62 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
             osi3::MovingObject_::VehicleClassification_::Type::TYPE_MOTORBIKE,
             osi3::MovingObject_::VehicleClassification_::Type::TYPE_BUS };
 
-    std::vector<flatbuffers::Offset<osi3::MovingObject>> moving_object_vector;
+
     for (unsigned int i=0;i<10;i++) {
-        osi3::IdentifierBuilder id_builder(builder);
-        id_builder.add_value(10+i);
-        auto moving_obj_id = id_builder.Finish();
-
-        osi3::MovingObject_::VehicleClassificationBuilder vehicle_classification_builder(builder);
-        //vehicle_classification_builder.add_type(source_veh_types[i]);     //todo: vehicle classifications are wrong in headers due to namespace conflict -> confused with moving object type
-        auto vehicle_classification = vehicle_classification_builder.Finish();
-
-        auto bbcenter_to_rear = osi3::CreateVector3d(builder, 1.0, 0.0, -0.3);
-        osi3::MovingObject_::VehicleAttributesBuilder vehicle_attributes_builder(builder);
-        vehicle_attributes_builder.add_bbcenter_to_rear(bbcenter_to_rear);
-        auto vehicle_attributes = vehicle_attributes_builder.Finish();
-
-        auto dimension = osi3::CreateDimension3d(builder, 5.0, 2.0, 1.5);
-        auto position = osi3::CreateVector3d(builder, source_x_offsets[i]+time*source_x_speeds[i], source_y_offsets[i]+sin(time/source_x_speeds[i])*0.25, 0.0);
-        auto velocity = osi3::CreateVector3d(builder, source_x_speeds[i], cos(time/source_x_speeds[i])*0.25/source_x_speeds[i], 0.0);
-        auto acceleration = osi3::CreateVector3d(builder, 0.0, -sin(time/source_x_speeds[i])*0.25/(source_x_speeds[i]*source_x_speeds[i]), 0.0);
-        auto orientation = osi3::CreateOrientation3d(builder, 0.0, 0.0, 0.0);
-        auto orientation_rate = osi3::CreateOrientation3d(builder, 0.0, 0.0, 0.0);
-        osi3::BaseMovingBuilder base_moving_builder(builder);
-        base_moving_builder.add_dimension(dimension);
-        base_moving_builder.add_position(position);
-        base_moving_builder.add_velocity(velocity);
-        base_moving_builder.add_acceleration(acceleration);
-        base_moving_builder.add_orientation(orientation);
-        base_moving_builder.add_orientation_rate(orientation_rate);
-        auto base_moving = base_moving_builder.Finish();
-
-        osi3::MovingObjectBuilder moving_object_builder(builder);
-        moving_object_builder.add_id(moving_obj_id);
-        //moving_object_builder.add_type(osi3::MovingObject_::Type::TYPE_VEHICLE);  //todo: vehicle types are wrong in headers due to namespace conflict -> stationary and moving are confused
-        moving_object_builder.add_vehicle_classification(vehicle_classification);
-        moving_object_builder.add_vehicle_attributes(vehicle_attributes);
-        moving_object_builder.add_base(base_moving);
-        auto current_moving_object = moving_object_builder.Finish();
-        moving_object_vector.push_back(current_moving_object);
-
-        auto moving_object = reinterpret_cast<osi3::MovingObject *>(builder.GetCurrentBufferPointer() + builder.GetSize() - current_moving_object.o);
-        normal_log("OSI","GT: Adding Vehicle %d[%llu] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)",i,moving_object->id()->value(),moving_object->base()->position()->x(),moving_object->base()->position()->y(),moving_object->base()->position()->z(),moving_object->base()->velocity()->x(),moving_object->base()->velocity()->y(),moving_object->base()->velocity()->z());
+        auto veh = std::unique_ptr<osi3::MovingObjectT>(new osi3::MovingObjectT());
+        auto veh_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
+        veh_id->value = 10+i;
+        veh->id = std::move(veh_id);
+        //veh.type = osi3::MovingObject_::Type::TYPE_VEHICLE;     //todo: vehicle types are wrong in headers due to namespace conflict -> stationary and moving are confused
+        //veh.vehicle_classification->type = source_veh_types[i]; //todo: vehicle classifications are wrong in headers due to namespace conflict -> confused with moving object type
+        //veh.vehicle_classification->light_state->indicator_state = osi3::MovingObject_::VehicleClassification_::LightState_::IndicatorState::INDICATOR_STATE_OFF;
+        //veh.vehicle_classification->light_state->brake_light_state = osi3::MovingObject_::VehicleClassification_::LightState_::BrakeLightState::BRAKE_LIGHT_STATE_OFF;
+        auto vehicle_attributes = std::unique_ptr<osi3::MovingObject_::VehicleAttributesT>(new osi3::MovingObject_::VehicleAttributesT());
+        auto bbcenter_to_rear = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
+        bbcenter_to_rear->x = 1;
+        bbcenter_to_rear->y = 0;
+        bbcenter_to_rear->x = -0.3;
+        vehicle_attributes->bbcenter_to_rear = std::move(bbcenter_to_rear);
+        veh->vehicle_attributes = std::move(vehicle_attributes);
+        auto base = std::unique_ptr<osi3::BaseMovingT>(new osi3::BaseMovingT());
+        auto dimension = std::unique_ptr<osi3::Dimension3dT>(new osi3::Dimension3dT());
+        dimension->height = 1.5;
+        dimension->width = 2.0;
+        dimension->length = 5.0;
+        base->dimension = std::move(dimension);
+        auto base_position = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
+        base_position->x = source_x_offsets[i]+time*source_x_speeds[i];
+        base_position->y = source_y_offsets[i]+sin(time/source_x_speeds[i])*0.25;
+        base_position->z = 0.0;
+        base->position = std::move(base_position);
+        auto velocity = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
+        velocity->x = source_x_speeds[i];
+        velocity->y = cos(time/source_x_speeds[i])*0.25/source_x_speeds[i];
+        velocity->z = 0.0;
+        base->velocity = std::move(velocity);
+        auto acceleration = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
+        acceleration->x = 0.0;
+        acceleration->y = -sin(time/source_x_speeds[i])*0.25/(source_x_speeds[i]*source_x_speeds[i]);
+        acceleration->z = 0.0;
+        base->acceleration = std::move(acceleration);
+        auto orientation = std::unique_ptr<osi3::Orientation3dT>(new osi3::Orientation3dT());
+        orientation->pitch = 0.0;
+        orientation->roll = 0.0;
+        orientation->yaw = 0.0;
+        base->orientation = std::move(orientation);
+        auto orientation_rate = std::unique_ptr<osi3::Orientation3dT>(new osi3::Orientation3dT());
+        orientation_rate->pitch = 0.0;
+        orientation_rate->roll = 0.0;
+        orientation_rate->yaw = 0.0;
+        base->orientation_rate = std::move(orientation_rate);
+        veh->base = std::move(base);
+        normal_log("OSI","GT: Adding Vehicle %d[%llu] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)",i,veh->id->value,veh->base->position->x,veh->base->position->y,veh->base->position->z,veh->base->velocity->x,veh->base->velocity->y,veh->base->velocity->z);
+        currentGT->moving_object.push_back(std::move(veh));
     }
-    auto moving_object_flatvector = builder.CreateVector(moving_object_vector);
+    currentOut.global_ground_truth = std::move(currentGT);
+    std::cout << "DummySource time doCalc(): " << time << std::endl;
 
-    auto timestamp = osi3::CreateTimestamp(builder, (int64_t)floor(time), (int)((time - floor(time))*1000000000.0));
-    osi3::IdentifierBuilder host_vehicle_id_builder(builder);
-    host_vehicle_id_builder.add_value(14);
-    auto host_vehicle_id = host_vehicle_id_builder.Finish();
-    osi3::GroundTruthBuilder ground_truth_builder(builder);
-    ground_truth_builder.add_timestamp(timestamp);
-    ground_truth_builder.add_host_vehicle_id(host_vehicle_id);
-    ground_truth_builder.add_moving_object(moving_object_flatvector);
-    auto ground_truth = ground_truth_builder.Finish();
-
-    auto sensor_id = osi3::CreateIdentifier(builder, 10000);
-
-    osi3::SensorViewBuilder sensor_view_builder(builder);
-    //sensor_view_builder.add_version(osi3::InterfaceVersion::descriptor()->file()->options().GetExtension(osi3::current_interface_version));   //todo: the used Protobuf FileOptions do not exist in Flatbuffers
-    sensor_view_builder.add_sensor_id(sensor_id);
-    sensor_view_builder.add_host_vehicle_id(host_vehicle_id);
-    sensor_view_builder.add_timestamp(timestamp);
-    sensor_view_builder.add_global_ground_truth(ground_truth);
-    sensor_view_builder.add_lidar_sensor_view(lidar_sensor_view_flatvector);
-    auto sensor_view = sensor_view_builder.Finish();
-
-    std::chrono::milliseconds startOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
-
-    builder.Finish(sensor_view);
-    auto uint8_buffer = builder.GetBufferPointer();
-    auto size = builder.GetSize();
-    std::string tmp_buffer(reinterpret_cast<char const*>(uint8_buffer), size);
-    currentBuffer = tmp_buffer;
-
-    set_fmi_sensor_view_out();
-    set_fmi_valid(true);
-    set_fmi_count((int)moving_object_vector.size());
-
-    std::chrono::milliseconds stopOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
-
-    //// Performance logging
-    auto sensor_view_in = flatbuffers::GetRoot<osi3::SensorView>(uint8_buffer);
+    //check if file exists
     std::ifstream f(fileName.c_str());
     bool fileExists = f.is_open();
     f.close();
@@ -376,11 +366,11 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         logFile << "\t\t{" << std::endl;
         logFile << "\t\t\t\"Instance\": {" << std::endl;
         logFile << "\t\t\t\t\"ModelIdentity\": " << "\"OSMPDummySource Flatbuf\"" << std::endl;
-        /*logFile << "\t\t\t\t\"ModelIdentity\": " << "\"OSMPDummySource Flatbuf\"" << "," << std::endl;
+        /*logFile << "\t\t\t\t\"ModelIdentity\": " << "\"OSMPDummySource Protobuf\"" << "," << std::endl;
         logFile << "\t\t\t\t\"OsiVersion\": {" << std::endl;
-        logFile << "\t\t\t\t\t\"version_major\": " << sensor_view_in->version()->version_major() << "," << std::endl;
-        logFile << "\t\t\t\t\t\"version_minor\": " << sensor_view_in->version()->version_minor() << "," << std::endl;
-        logFile << "\t\t\t\t\t\"version_patch\": " << sensor_view_in->version()->version_patch() << std::endl;
+        logFile << "\t\t\t\t\t\"version_major\": "<< currentOut.version->version_major() << "," << std::endl;
+        logFile << "\t\t\t\t\t\"version_minor\": "<< currentOut.version->version_minor() << "," << std::endl;
+        logFile << "\t\t\t\t\t\"version_patch\": "<< currentOut.version->version_patch() << std::endl;
         logFile << "\t\t\t\t}" << std::endl;*/
         logFile << "\t\t\t}," << std::endl;
         logFile << "\t\t\t\"OsiEvents\": [" << std::endl;
@@ -388,11 +378,26 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         logFile.open (fileName, std::ios_base::app);
     }
 
+    float osiSimTime = currentOut.global_ground_truth->timestamp->seconds + (float)currentOut.global_ground_truth->timestamp->nanos * 0.000000001;
+
+    std::chrono::milliseconds startOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+
+    builder.Finish(osi3::SensorView::Pack(builder, &currentOut));
+    auto uint8_buffer = builder.GetBufferPointer();
+    auto size = builder.GetSize();
+    std::string tmp_buffer(reinterpret_cast<char const*>(uint8_buffer), size);
+    currentBuffer = tmp_buffer;
+
+    set_fmi_sensor_view_out();
+    set_fmi_valid(true);
+    set_fmi_count((int)currentOut.global_ground_truth->moving_object.size());
+
+    std::chrono::milliseconds stopOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+
     if(fileExists) {
         logFile << "," <<  std::endl;
     }
-    size_t sensorViewSize = builder.GetSize();
-    double osiSimTime = (double)sensor_view_in->global_ground_truth()->timestamp()->seconds() + (double)sensor_view_in->global_ground_truth()->timestamp()->nanos() * 0.000000001;
+    int sensorViewSize = size;
     logFile << "\t\t\t\t[" << "0" << ", " << std::setprecision(13) << (double)start_source_calc.count()/1000.0 << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
     logFile << "\t\t\t\t[" << "1" << ", " << std::setprecision(13) << (double)startOSISerialize.count()/1000.0 << ", " << osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
     logFile << "\t\t\t\t[" << "2" << ", " << std::setprecision(13) << (double)stopOSISerialize.count()/1000.0 << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]";
