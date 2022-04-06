@@ -35,7 +35,7 @@ The three actual variables shall contain an annotation of the following form in 
 
 [source,xml]
 ----
-<Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="<prefix>" role="<role>" mime-type="<mime-type>"/></Tool>
+<Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISimulationModelPackaging"><osmp:osmp-binary-variable name="<prefix>" role="<role>" mime-type="<mime-type>"/></Tool>
 ----
 
 `<prefix>` is the prefix as defined above, and `@role` is either `base.lo`, `base.hi`, or `size`, depending on the variable.
