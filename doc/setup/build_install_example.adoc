@@ -22,13 +22,13 @@ Demonstrates a simple C network proxy that can send and receive OSI data via TCP
 . Clone the OSMP repository.
 +
 ----
-git clone https://github.com/OpenSimulationInterface/osi-sensor-model-packaging.git
+git clone https://github.com/OpenSimulationInterface/osi-simulation-model-packaging.git
 ----
 +
 . Switch to the OSMP repository.
 +
 ----
-cd osi-sensor-model-packaging
+cd osi-simulation-model-packaging
 ----
 +
 . Update and initialize the OSI submodule.

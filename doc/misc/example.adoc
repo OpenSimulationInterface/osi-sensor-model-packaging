@@ -8,7 +8,7 @@ The example describes a sensor model FMU with one input, one output, and no addi
 <?xml version="1.0" encoding="UTF-8"?>
 <fmiModelDescription
   fmiVersion="2.0"
-  modelName="OSI Sensor Model Packaging Demo FMU"
+  modelName="OSI Simulation Model Packaging Demo FMU"
   guid="aabc2174e20f08597cfae6947c96bf86"
   variableNamingConvention="structured">
   <CoSimulation

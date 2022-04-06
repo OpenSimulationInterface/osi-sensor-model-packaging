@@ -3,7 +3,7 @@
   fmiVersion="2.0"
   modelName="OSMP Dummy Sensor FMU"
   guid="@FMUGUID@"
-  description="Demonstration C++ Sensor FMU for OSI Sensor Model Packaging"
+  description="Demonstration C++ Sensor FMU for OSI Simulation Model Packaging"
   author="PMSF"
   version="@OSMPVERSION@"
   generationTool="PMSF Manual FMU Framework"
