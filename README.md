@@ -5,7 +5,7 @@
 OSI Simulation Model Packaging specifies ways in which models (like e.g. environmental effect models, sensor models and logical models) using the [Open Simulation Interface (OSI)][] are to be packaged for their use in simulation environments using FMI 2.0.
 The specification can be found in the [doc/osi-simulation-model-packaging_spec.adoc](doc/osi-simulation-model-packaging_spec.adoc) document in this repository.
 
-For more detailed information see the [official documentation](https://opensimulationinterface.github.io/osi-documentation/#_osi_sensor_model_packaging). (TODO: Change Docu and then fix link accordingly)
+For more detailed information see the [official documentation](https://opensimulationinterface.github.io/osi-documentation/#_osi_simulation_model_packaging). 
 
 [Open Simulation Interface (OSI)]: https://github.com/OpenSimulationInterface/open-simulation-interface
 
