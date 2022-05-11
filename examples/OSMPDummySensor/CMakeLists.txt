@@ -3,7 +3,7 @@ project(OSMPDummySensor)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(LINK_WITH_SHARED_OSI OFF CACHE BOOL "Link FMU with shared OSI library instead of statically linking")
+set(LINK_WITH_SHARED_OSI ON CACHE BOOL "Link FMU with shared OSI library instead of statically linking")
 set(PUBLIC_LOGGING OFF CACHE BOOL "Enable logging via FMI logger")
 set(PRIVATE_LOGGING OFF CACHE BOOL "Enable private logging to file")
 if(WIN32)
