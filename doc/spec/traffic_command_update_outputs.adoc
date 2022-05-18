@@ -1,10 +1,10 @@
-= Traffic update outputs
+= Traffic command update outputs
 
 Traffic command update outputs are present in traffic participant models.
 
 **Prefix**
 
-Traffic update outputs shall be named with the following prefix:
+Traffic command update outputs shall be named with the following prefix:
 
 [source,protobuf]
 ----
