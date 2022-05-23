@@ -10,6 +10,9 @@
 
 #include "OSMPDummySource.h"
 
+#define NO_LIDAR_REFLECTIONS
+#define LIDAR_NUM_LAYERS 32
+#define OBJECTS_MULT 50
 /*
  * Debug Breaks
  *
@@ -218,6 +221,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     currentGT->mutable_host_vehicle_id()->set_value(14);
 
     //// Lidar Reflections
+#ifndef NO_LIDAR_REFLECTIONS
     auto lidar_sensor_view = currentOut.add_lidar_sensor_view();
     auto lidar_sensor_view_configuration = lidar_sensor_view->mutable_view_configuration();
     lidar_sensor_view_configuration->set_field_of_view_horizontal(145.0 / 180 * M_PI);
@@ -226,7 +230,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     lidar_sensor_view_configuration->mutable_mounting_position()->mutable_position()->set_y(0.0); // from middle of rear axle, in m
     lidar_sensor_view_configuration->mutable_mounting_position()->mutable_position()->set_z(1.232);  // from middle of rear axle, in m // 0.382 + 0.85
 
-    int no_of_layers = 32;                  // the number of layers of every lidar front-end
+    int no_of_layers = LIDAR_NUM_LAYERS;    // the number of layers of every lidar front-end
     double azimuth_fov = 360.0;             // Azimuth angle FoV in °
     int rays_per_beam_vertical = 3;         // vertical super-sampling factor
     int rays_per_beam_horizontal = 6;       // horizontal super-sampling factor
@@ -245,6 +249,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
             ray->set_signal_strength(max_emitted_signal_strength_in_dB + 10 * std::log10(attenuation) - 10 * std::log10(rays_per_beam)); // assuming equal distribution of beam power per ray
         }
     }
+#endif
 
     //// Moving Objects
     static double source_y_offsets[10] = { 3.0, 3.0, 3.0, 0.25, 0, -0.25, -3.0, -3.0, -3.0, -3.0 };
@@ -262,12 +267,12 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
             osi3::MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE,
             osi3::MovingObject_VehicleClassification_Type_TYPE_BUS };
 
-    for (unsigned int i=0;i<10;i++) {
+    for (unsigned int i=0;i<(10*OBJECTS_MULT);i++) {
         osi3::MovingObject *veh = currentGT->add_moving_object();
         veh->mutable_id()->set_value(10+i);
         veh->set_type(osi3::MovingObject_Type_TYPE_VEHICLE);
         auto vehclass = veh->mutable_vehicle_classification();
-        vehclass->set_type(source_veh_types[i]);
+        vehclass->set_type(source_veh_types[i % 10]);
         auto vehlights = vehclass->mutable_light_state();
         vehlights->set_indicator_state(osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_OFF);
         vehlights->set_brake_light_state(osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_OFF);
@@ -277,14 +282,15 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         veh->mutable_base()->mutable_dimension()->set_height(1.5);
         veh->mutable_base()->mutable_dimension()->set_width(2.0);
         veh->mutable_base()->mutable_dimension()->set_length(5.0);
-        veh->mutable_base()->mutable_position()->set_x(source_x_offsets[i]+time*source_x_speeds[i]);
-        veh->mutable_base()->mutable_position()->set_y(source_y_offsets[i]+sin(time/source_x_speeds[i])*0.25);
-        veh->mutable_base()->mutable_position()->set_z(0.0);
-        veh->mutable_base()->mutable_velocity()->set_x(source_x_speeds[i]);
-        veh->mutable_base()->mutable_velocity()->set_y(cos(time/source_x_speeds[i])*0.25/source_x_speeds[i]);
+        const auto x_speed = source_x_speeds[i % 10];
+        veh->mutable_base()->mutable_position()->set_x(source_x_offsets[i % 10]+time*x_speed);
+        veh->mutable_base()->mutable_position()->set_y(source_y_offsets[i % 10]+sin(time/x_speed)*0.25);
+        veh->mutable_base()->mutable_position()->set_z(0.0);        
+        veh->mutable_base()->mutable_velocity()->set_x(x_speed);
+        veh->mutable_base()->mutable_velocity()->set_y(cos(time/x_speed)*0.25/x_speed);
         veh->mutable_base()->mutable_velocity()->set_z(0.0);
         veh->mutable_base()->mutable_acceleration()->set_x(0.0);
-        veh->mutable_base()->mutable_acceleration()->set_y(-sin(time/source_x_speeds[i])*0.25/(source_x_speeds[i]*source_x_speeds[i]));
+        veh->mutable_base()->mutable_acceleration()->set_y(-sin(time/x_speed)*0.25/(x_speed*x_speed));
         veh->mutable_base()->mutable_acceleration()->set_z(0.0);
         veh->mutable_base()->mutable_orientation()->set_pitch(0.0);
         veh->mutable_base()->mutable_orientation()->set_roll(0.0);

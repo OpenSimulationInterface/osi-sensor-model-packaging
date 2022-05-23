@@ -10,6 +10,10 @@
 
 #include "OSMPDummySource.h"
 
+#define NO_LIDAR_REFLECTIONS
+#define LIDAR_NUM_LAYERS 32
+#define OBJECTS_MULT 50
+
 /*
  * Debug Breaks
  *
@@ -230,6 +234,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     currentGT->host_vehicle_id = std::move(gt_host_vehicle_id);
 
     //// Lidar Reflections
+#ifndef NO_LIDAR_REFLECTIONS
     auto lidar_sensor_view = std::unique_ptr<osi3::LidarSensorViewT>(new osi3::LidarSensorViewT());
     auto view_configuration = std::unique_ptr<osi3::LidarSensorViewConfigurationT>(new osi3::LidarSensorViewConfigurationT());
     view_configuration->field_of_view_horizontal = 145.0 / 180 * M_PI;
@@ -243,7 +248,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     view_configuration->mounting_position = std::move(mounting_position);
     lidar_sensor_view->view_configuration = std::move(view_configuration);
 
-    int no_of_layers = 32;                  // the number of layers of every lidar front-end
+    int no_of_layers = LIDAR_NUM_LAYERS;    // the number of layers of every lidar front-end
     double azimuth_fov = 360.0;             // Azimuth angle FoV in °
     int rays_per_beam_vertical = 3;         // vertical super-sampling factor
     int rays_per_beam_horizontal = 6;       // horizontal super-sampling factor
@@ -265,6 +270,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     }
     //currentOut.lidar_sensor_view.push_back(std::unique_ptr<osi3::LidarSensorViewT>(&lidar_sensor_view));
     currentOut.lidar_sensor_view.push_back(std::move(lidar_sensor_view));
+#endif
 
     //// Moving Objects
     static double source_y_offsets[10] = { 3.0, 3.0, 3.0, 0.25, 0, -0.25, -3.0, -3.0, -3.0, -3.0 };
@@ -283,7 +289,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
             osi3::MovingObject_::VehicleClassification_::Type::TYPE_BUS };
 
 
-    for (unsigned int i=0;i<10;i++) {
+    for (unsigned int i=0;i<(10*OBJECTS_MULT);i++) {
         auto veh = std::unique_ptr<osi3::MovingObjectT>(new osi3::MovingObjectT());
         auto veh_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
         veh_id->value = 10+i;
@@ -305,19 +311,20 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         dimension->width = 2.0;
         dimension->length = 5.0;
         base->dimension = std::move(dimension);
+        const auto x_speed = source_x_speeds[i % 10];
         auto base_position = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
-        base_position->x = source_x_offsets[i]+time*source_x_speeds[i];
-        base_position->y = source_y_offsets[i]+sin(time/source_x_speeds[i])*0.25;
+        base_position->x = source_x_offsets[i % 10]+time*x_speed;
+        base_position->y = source_y_offsets[i % 10]+sin(time/x_speed)*0.25;
         base_position->z = 0.0;
         base->position = std::move(base_position);
         auto velocity = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
-        velocity->x = source_x_speeds[i];
-        velocity->y = cos(time/source_x_speeds[i])*0.25/source_x_speeds[i];
+        velocity->x = x_speed;
+        velocity->y = cos(time/x_speed)*0.25/x_speed;
         velocity->z = 0.0;
         base->velocity = std::move(velocity);
         auto acceleration = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
         acceleration->x = 0.0;
-        acceleration->y = -sin(time/source_x_speeds[i])*0.25/(source_x_speeds[i]*source_x_speeds[i]);
+        acceleration->y = -sin(time/x_speed)*0.25/(x_speed*x_speed);
         acceleration->z = 0.0;
         base->acceleration = std::move(acceleration);
         auto orientation = std::unique_ptr<osi3::Orientation3dT>(new osi3::Orientation3dT());
