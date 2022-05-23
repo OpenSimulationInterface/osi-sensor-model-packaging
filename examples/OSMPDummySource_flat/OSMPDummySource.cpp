@@ -16,6 +16,10 @@
 
 #include "OSMPDummySource.h"
 
+#define NO_LIDAR_REFLECTIONS
+#define LIDAR_NUM_LAYERS 32
+#define OBJECTS_MULT 1
+
 /*
  * Debug Breaks
  *
@@ -219,6 +223,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     /* We act as GroundTruth Source */
 
     //// Lidar Reflections
+#ifndef NO_LIDAR_REFLECTIONS
     auto mounting_pos_position = osi3::CreateVector3d(builder, 1.5205, 0.0, 1.232);
     osi3::MountingPositionBuilder mounting_position_builder(builder);
     mounting_position_builder.add_position(mounting_pos_position);
@@ -230,7 +235,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     lidar_sensor_view_configuration_builder.add_mounting_position(mounting_position);
     auto lidar_sensor_view_configuration = lidar_sensor_view_configuration_builder.Finish();
 
-    int no_of_layers = 32;                  // the number of layers of every lidar front-end
+    int no_of_layers = LIDAR_NUM_LAYERS;    // the number of layers of every lidar front-end
     double azimuth_fov = 360.0;             // Azimuth angle FoV in °
     int rays_per_beam_vertical = 3;         // vertical super-sampling factor
     int rays_per_beam_horizontal = 6;       // horizontal super-sampling factor
@@ -261,6 +266,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     std::vector<flatbuffers::Offset<osi3::LidarSensorView>> lidar_sensor_view_vector;
     lidar_sensor_view_vector.push_back(lidar_sensor_view);
     auto lidar_sensor_view_flatvector = builder.CreateVector(lidar_sensor_view_vector);
+#endif
 
     //// Moving Objects
     static double source_y_offsets[10] = { 3.0, 3.0, 3.0, 0.25, 0, -0.25, -3.0, -3.0, -3.0, -3.0 };
@@ -279,7 +285,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
             osi3::MovingObject_::VehicleClassification_::Type::TYPE_BUS };
 
     std::vector<flatbuffers::Offset<osi3::MovingObject>> moving_object_vector;
-    for (unsigned int i=0;i<10;i++) {
+    for (unsigned int i=0;i<(10*OBJECTS_MULT);i++) {
         osi3::IdentifierBuilder id_builder(builder);
         id_builder.add_value(10+i);
         auto moving_obj_id = id_builder.Finish();
@@ -294,9 +300,10 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         auto vehicle_attributes = vehicle_attributes_builder.Finish();
 
         auto dimension = osi3::CreateDimension3d(builder, 5.0, 2.0, 1.5);
-        auto position = osi3::CreateVector3d(builder, source_x_offsets[i]+time*source_x_speeds[i], source_y_offsets[i]+sin(time/source_x_speeds[i])*0.25, 0.0);
-        auto velocity = osi3::CreateVector3d(builder, source_x_speeds[i], cos(time/source_x_speeds[i])*0.25/source_x_speeds[i], 0.0);
-        auto acceleration = osi3::CreateVector3d(builder, 0.0, -sin(time/source_x_speeds[i])*0.25/(source_x_speeds[i]*source_x_speeds[i]), 0.0);
+        const auto x_speed = source_x_speeds[i % 10];
+        auto position = osi3::CreateVector3d(builder, source_x_offsets[i % 10]+time*x_speed, source_y_offsets[i % 10]+sin(time/x_speed)*0.25, 0.0);
+        auto velocity = osi3::CreateVector3d(builder, x_speed, cos(time/x_speed)*0.25/x_speed, 0.0);
+        auto acceleration = osi3::CreateVector3d(builder, 0.0, -sin(time/x_speed)*0.25/(x_speed*x_speed), 0.0);
         auto orientation = osi3::CreateOrientation3d(builder, 0.0, 0.0, 0.0);
         auto orientation_rate = osi3::CreateOrientation3d(builder, 0.0, 0.0, 0.0);
         osi3::BaseMovingBuilder base_moving_builder(builder);
@@ -340,7 +347,9 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     sensor_view_builder.add_host_vehicle_id(host_vehicle_id);
     sensor_view_builder.add_timestamp(timestamp);
     sensor_view_builder.add_global_ground_truth(ground_truth);
+#ifndef NO_LIDAR_REFLECTIONS
     sensor_view_builder.add_lidar_sensor_view(lidar_sensor_view_flatvector);
+#endif
     auto sensor_view = sensor_view_builder.Finish();
 
     auto startOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
