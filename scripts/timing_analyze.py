@@ -1,15 +1,17 @@
 import json
 import numpy as np
 
-#timing_json_path = '/tmp/OSMPDummySensor_flatbuf_timing_13-30-52.json'
-#timing_json_path = '/tmp/OSMPDummySource_flatbuf_timing_13-30-52.json'
-#timing_json_path = '/tmp/OSMPDummySensor_flatbuf_timing_15-35-40.json'
-timing_json_path = '/tmp/OSMPDummySource_flatbuf_timing_15-35-40.json'
+############### FLATB BUILDER ################
+#timing_json_path = '/home/martin/development/flatbuf_test_data/lidar_830k/flatb_builder/OSMPDummySensor_flatbuf_timing_11-18-45.json'
+#timing_json_path = '/home/martin/development/flatbuf_test_data/lidar_830k/flatb_builder/OSMPDummySource_flatbuf_timing_11-18-45.json'
 
-#timing_json_path = '/tmp/OSMPDummySensor_Protobuf_timing_13-23-09.json'
-#timing_json_path = '/tmp/OSMPDummySource_Protobuf_timing_13-23-09.json'
-#timing_json_path = '/tmp/OSMPDummySensor_Protobuf_timing_15-29-42.json'
-#timing_json_path = '/tmp/OSMPDummySource_Protobuf_timing_15-29-41.json'
+############### FLATB OBJECT API #############
+#timing_json_path = '/home/martin/development/flatbuf_test_data/lidar_830k/flatb_object_api/OSMPDummySensor_flatbuf_timing_12-13-41.json'
+#timing_json_path = '/home/martin/development/flatbuf_test_data/lidar_830k/flatb_object_api/OSMPDummySource_flatbuf_timing_12-13-40.json'
+
+############### PROTOB #######################
+timing_json_path = '/home/martin/development/flatbuf_test_data/lidar_830k/protob/OSMPDummySensor_Protobuf_timing_12-18-50.json'
+#timing_json_path = '/home/martin/development/flatbuf_test_data/lidar_830k/protob/OSMPDummySource_Protobuf_timing_12-18-49.json'
 
 # Opening JSON file
 f = open(timing_json_path)

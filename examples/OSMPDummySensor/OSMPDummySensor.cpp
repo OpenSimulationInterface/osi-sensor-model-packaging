@@ -274,9 +274,9 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     osi3::SensorData currentOut;
     double time = currentCommunicationPoint+communicationStepSize;
     normal_log("OSI","Calculating Sensor at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
-    std::chrono::milliseconds startOSIDeserialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+    auto startOSIDeserialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
     if (get_fmi_sensor_view_in(currentIn)) {
-        std::chrono::milliseconds stopOSIDeserialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+        auto stopOSIDeserialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
         //// Lidar Detections
         if (currentIn.lidar_sensor_view_size() > 0) {
             auto lidar_sensor = currentOut.mutable_feature_data()->add_lidar_sensor();
@@ -380,11 +380,11 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         normal_log("OSI","Mapped %d vehicles to output", i);
 
         /* Serialize */
-        std::chrono::milliseconds startOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+        auto startOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
         set_fmi_sensor_data_out(currentOut);
         set_fmi_valid(true);
         set_fmi_count(currentOut.moving_object_size());
-        std::chrono::milliseconds stopOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+        auto stopOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
 
         //Performance logging
         std::ifstream f(fileName.c_str());
@@ -432,10 +432,10 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         }
         size_t sensorDataSize = currentOut.ByteSize();
         double osiSimTime = (double)currentOut.timestamp().seconds() + (float)currentOut.timestamp().nanos() * 0.000000001;
-        logFile << "\t\t\t\t[" << "2" << ", " << std::setprecision(13) << (double)startOSIDeserialize.count()/1000.0 << ", " << osiSimTime << ", " << "0" << ", " << "2" << ", " << 999 << "]," << std::endl;   //todo: sensor view size
-        logFile << "\t\t\t\t[" << "3" << ", " << std::setprecision(13) << (double)stopOSIDeserialize.count()/1000.0 << ", " <<  osiSimTime << ", " << "0" << ", " << "2" << ", " << 999 << "]," << std::endl;
-        logFile << "\t\t\t\t[" << "0" << ", " << std::setprecision(13) << (double)startOSISerialize.count()/1000.0 << ", " << osiSimTime << ", " << "1" <<  ", " << "5" << ", " << sensorDataSize << "]," <<  std::endl;
-        logFile << "\t\t\t\t[" << "1" << ", " << std::setprecision(13) << (double)stopOSISerialize.count()/1000.0 << ", " <<  osiSimTime << ", " << "1" <<  ", " << "5" << ", " << sensorDataSize << "]";
+        logFile << "\t\t\t\t[" << "2" << ", " << std::setprecision(16) << (double)startOSIDeserialize.count() << ", " << osiSimTime << ", " << "0" << ", " << "2" << ", " << 999 << "]," << std::endl;   //todo: sensor view size
+        logFile << "\t\t\t\t[" << "3" << ", " << std::setprecision(16) << (double)stopOSIDeserialize.count() << ", " <<  osiSimTime << ", " << "0" << ", " << "2" << ", " << 999 << "]," << std::endl;
+        logFile << "\t\t\t\t[" << "0" << ", " << std::setprecision(16) << (double)startOSISerialize.count() << ", " << osiSimTime << ", " << "1" <<  ", " << "5" << ", " << sensorDataSize << "]," <<  std::endl;
+        logFile << "\t\t\t\t[" << "1" << ", " << std::setprecision(16) << (double)stopOSISerialize.count() << ", " <<  osiSimTime << ", " << "1" <<  ", " << "5" << ", " << sensorDataSize << "]";
         logFile.close();
 
     } else {
