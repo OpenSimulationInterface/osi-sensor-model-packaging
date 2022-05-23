@@ -197,7 +197,7 @@ void rotatePoint(double x, double y, double z,double yaw,double pitch,double rol
 fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint)
 {
     DEBUGBREAK();
-    std::chrono::milliseconds start_source_calc = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+    auto start_source_calc = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
 
     osi3::SensorView currentOut;
     double time = currentCommunicationPoint+communicationStepSize;
@@ -339,20 +339,20 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
 
     float osiSimTime = currentOut.global_ground_truth().timestamp().seconds() + (float)currentOut.global_ground_truth().timestamp().nanos() * 0.000000001;
 
-    std::chrono::milliseconds startOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+    auto startOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
 
     set_fmi_sensor_view_out(currentOut);
     set_fmi_valid(true);
     set_fmi_count(currentGT->moving_object_size());
-    std::chrono::milliseconds stopOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+    auto stopOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
 
     if(fileExists) {
         logFile << "," <<  std::endl;
     }
     int sensorViewSize = currentOut.ByteSize();
-    logFile << "\t\t\t\t[" << "0" << ", " << std::setprecision(13) << (double)start_source_calc.count()/1000.0 << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
-    logFile << "\t\t\t\t[" << "1" << ", " << std::setprecision(13) << (double)startOSISerialize.count()/1000.0 << ", " << osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
-    logFile << "\t\t\t\t[" << "2" << ", " << std::setprecision(13) << (double)stopOSISerialize.count()/1000.0 << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]";
+    logFile << "\t\t\t\t[" << "0" << ", " << std::setprecision(16) << (double)start_source_calc.count() << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
+    logFile << "\t\t\t\t[" << "1" << ", " << std::setprecision(16) << (double)startOSISerialize.count()<< ", " << osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
+    logFile << "\t\t\t\t[" << "2" << ", " << std::setprecision(16) << (double)stopOSISerialize.count() << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]";
     logFile.close();
 
     return fmi2OK;

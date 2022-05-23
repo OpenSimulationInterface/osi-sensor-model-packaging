@@ -1,13 +1,9 @@
 import json
 import numpy as np
 
-#timing_json_path = '/tmp/OSMPDummySensor_flatbuf_timing_13-30-52.json'
-#timing_json_path = '/tmp/OSMPDummySource_flatbuf_timing_13-30-52.json'
-#timing_json_path = '/tmp/OSMPDummySensor_flatbuf_timing_15-35-40.json'
-timing_json_path = '/tmp/OSMPDummySource_flatbuf_timing_15-35-40.json'
+timing_json_path = '/home/martin/development/flatbuf_test_data/flatb_builder/OSMPDummySensor_flatbuf_timing_11-18-45.json'
+#timing_json_path = '/home/martin/development/flatbuf_test_data/flatb_builder/OSMPDummySource_flatbuf_timing_11-18-45.json'
 
-#timing_json_path = '/tmp/OSMPDummySensor_Protobuf_timing_13-23-09.json'
-#timing_json_path = '/tmp/OSMPDummySource_Protobuf_timing_13-23-09.json'
 #timing_json_path = '/tmp/OSMPDummySensor_Protobuf_timing_15-29-42.json'
 #timing_json_path = '/tmp/OSMPDummySource_Protobuf_timing_15-29-41.json'
 

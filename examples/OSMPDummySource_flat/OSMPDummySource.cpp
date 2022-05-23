@@ -209,7 +209,7 @@ void rotatePoint(double x, double y, double z,double yaw,double pitch,double rol
 fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint)
 {
     DEBUGBREAK();
-    std::chrono::milliseconds start_source_calc = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+    auto start_source_calc = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
 
     flatbuffers::FlatBufferBuilder builder(1024);
     double time = currentCommunicationPoint+communicationStepSize;
@@ -343,7 +343,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     sensor_view_builder.add_lidar_sensor_view(lidar_sensor_view_flatvector);
     auto sensor_view = sensor_view_builder.Finish();
 
-    std::chrono::milliseconds startOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+    auto startOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
 
     builder.Finish(sensor_view);
     auto uint8_buffer = builder.GetBufferPointer();
@@ -355,7 +355,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     set_fmi_valid(true);
     set_fmi_count((int)moving_object_vector.size());
 
-    std::chrono::milliseconds stopOSISerialize = std::chrono::duration_cast< std::chrono::milliseconds >(std::chrono::system_clock::now().time_since_epoch());
+    auto stopOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
 
     //// Performance logging
     auto sensor_view_in = flatbuffers::GetRoot<osi3::SensorView>(uint8_buffer);
@@ -404,9 +404,9 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     }
     size_t sensorViewSize = builder.GetSize();
     double osiSimTime = (double)sensor_view_in->global_ground_truth()->timestamp()->seconds() + (double)sensor_view_in->global_ground_truth()->timestamp()->nanos() * 0.000000001;
-    logFile << "\t\t\t\t[" << "0" << ", " << std::setprecision(13) << (double)start_source_calc.count()/1000.0 << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
-    logFile << "\t\t\t\t[" << "1" << ", " << std::setprecision(13) << (double)startOSISerialize.count()/1000.0 << ", " << osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
-    logFile << "\t\t\t\t[" << "2" << ", " << std::setprecision(13) << (double)stopOSISerialize.count()/1000.0 << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]";
+    logFile << "\t\t\t\t[" << "0" << ", " << std::setprecision(16) << (double)start_source_calc.count() << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
+    logFile << "\t\t\t\t[" << "1" << ", " << std::setprecision(16) << (double)startOSISerialize.count() << ", " << osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]," <<  std::endl;
+    logFile << "\t\t\t\t[" << "2" << ", " << std::setprecision(16) << (double)stopOSISerialize.count() << ", " <<  osiSimTime << ", " << "0" <<  ", " << "5" << ", " << sensorViewSize << "]";
     logFile.close();
 
     return fmi2OK;
