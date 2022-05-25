@@ -6,18 +6,24 @@ import os
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_10/flatb_builder'
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_200/flatb_builder'
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_500/flatb_builder'
+#json_directory = '/home/martin/development/flatbuf_test_data/lidar_200k/flatb_builder'
+#json_directory = '/home/martin/development/flatbuf_test_data/lidar_400k/flatb_builder'
 #json_directory = '/home/martin/development/flatbuf_test_data/lidar_830k/flatb_builder'
 
 ############### FLATB OBJECT API #############
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_10/flatb_object_api'
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_200/flatb_object_api'
-json_directory = '/home/martin/development/flatbuf_test_data/objects_500/flatb_object_api'
+#json_directory = '/home/martin/development/flatbuf_test_data/objects_500/flatb_object_api'
+#json_directory = '/home/martin/development/flatbuf_test_data/lidar_200k/flatb_object_api'
+json_directory = '/home/martin/development/flatbuf_test_data/lidar_400k/flatb_object_api'
 #json_directory = '/home/martin/development/flatbuf_test_data/lidar_830k/flatb_object_api'
 
 ############### PROTOB #######################
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_10/protob'
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_200/protob'
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_500/protob'
+#json_directory = '/home/martin/development/flatbuf_test_data/lidar_200k/protob'
+#json_directory = '/home/martin/development/flatbuf_test_data/lidar_400k/protob'
 #json_directory = '/home/martin/development/flatbuf_test_data/lidar_830k/protob'
 
 def analyze_file(timing_json_path):
@@ -63,17 +69,19 @@ def analyze_file(timing_json_path):
     timingAvg = np.append(timingAvg, timingAvg.sum())
     timingMin = timingMat.min(axis = 0)
     timingMax = timingMat.max(axis = 0)
-    print(timeStrings)
-    print(timingAvg)
 
     # Closing file
     f.close()
+
+    return timingAvg, timeStrings, timingMin, timingMax
 
 def main():
     json_files=os.listdir(json_directory)
     for json_file in json_files:
         json_path = os.path.join(json_directory, json_file)
-        analyze_file(json_path)
+        tVals, tStrs, _, _ = analyze_file(json_path)
+        print(tStrs)
+        print(tVals)
 
 if __name__ == "__main__":
     main()
