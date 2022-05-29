@@ -41,6 +41,8 @@ include::./spec/ground_truth_init_parameters.adoc[leveloffset=+2]
 
 include::./spec/traffic_command_inputs.adoc[leveloffset=+2]
 
+include::./spec/traffic_command_update_outputs.adoc[leveloffset=+2]
+
 include::./spec/traffic_update_outputs.adoc[leveloffset=+2]
 
 == Examples
