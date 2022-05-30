@@ -10,6 +10,8 @@
 
 #include "OSMPDummySensor.h"
 
+#define NO_LIDAR_DETECTIONS
+
 /*
  * Debug Breaks
  *
@@ -278,11 +280,10 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     if (get_fmi_sensor_view_in(currentIn)) {
         auto stopOSIDeserialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
         //// Lidar Detections
+#ifndef NO_LIDAR_DETECTIONS
         if (currentIn.lidar_sensor_view_size() > 0) {
             auto lidar_sensor = currentOut.mutable_feature_data()->add_lidar_sensor();
-            int no_of_layers = 32;                  // the number of layers of every lidar front-end
             double azimuth_fov = 360.0;             // Azimuth angle FoV in °
-            int rays_per_beam_vertical = 3;         // vertical super-sampling factor
             int rays_per_beam_horizontal = 6;       // horizontal super-sampling factor
             double beam_step_azimuth = 0.2;         // horizontal step-size per beam in degrees of VLP32 at 600 rpm (10 Hz) with VLP32's fixed firing_cycle of 55.296e^(-6) s
             double beam_step_elevation = 0.3;       // simplified equidistant beam spacing
@@ -307,7 +308,7 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
                 }
             }
         }
-
+#endif
         //// Moving Objects
         double ego_x=0, ego_y=0, ego_z=0;
         osi3::Identifier ego_id = currentIn.global_ground_truth().host_vehicle_id();

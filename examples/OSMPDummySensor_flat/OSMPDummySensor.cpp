@@ -288,6 +288,8 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
 {
     DEBUGBREAK();
     flatbuffers::FlatBufferBuilder builder(1024);
+    auto sensorData = std::unique_ptr<osi3::SensorDataT>(new osi3::SensorDataT());
+
     double time = currentCommunicationPoint+communicationStepSize;
     auto startOSIDeserialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
     normal_log("OSI","Calculating Sensor at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
@@ -297,11 +299,10 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     if (sensor_view_in) {
         //// Lidar Detections
 #ifndef NO_LIDAR_DETECTIONS
-        std::vector<flatbuffers::Offset<osi3::LidarDetection>> lidar_detection_vector;
         if (sensor_view_in->lidar_sensor_view()) {
-            int no_of_layers = 32;                  // the number of layers of every lidar front-end
+            auto lidarDetectionData = std::unique_ptr<osi3::LidarDetectionDataT>(new osi3::LidarDetectionDataT());
+
             double azimuth_fov = 360.0;             // Azimuth angle FoV in °
-            int rays_per_beam_vertical = 3;         // vertical super-sampling factor
             int rays_per_beam_horizontal = 6;       // horizontal super-sampling factor
             double beam_step_azimuth = 0.2;         // horizontal step-size per beam in degrees of VLP32 at 600 rpm (10 Hz) with VLP32's fixed firing_cycle of 55.296e^(-6) s
             double beam_step_elevation = 0.3;       // simplified equidistant beam spacing
@@ -311,31 +312,31 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
             double speed_of_light = 299792458.0;
             size_t num_reflections = sensor_view_in->lidar_sensor_view()->Get(0)->reflection()->size();
             int layer_idx = -1;
+
             for (size_t reflection_idx = 0; reflection_idx < num_reflections; reflection_idx++) {
                 if ((reflection_idx % rays_per_layer) == 0) layer_idx++;
                 auto current_reflection = sensor_view_in->lidar_sensor_view()->Get(0)->reflection()->Get(reflection_idx);
                 if (reflection_idx % 18 == 0) {     //18 times super-sampling
-                    //todo: generate lidar detection
+                    // generate lidar detection
                     double distance = current_reflection->time_of_flight() * speed_of_light / 2;
                     double azimuth_deg = double(reflection_idx % rays_per_layer) * beam_step_azimuth;
                     double elevation_deg = layer_idx * beam_step_elevation - 5;     //start at -5° for simplification
-                    auto detection_position = osi3::CreateSpherical3d(builder, distance, azimuth_deg*M_PI/180, elevation_deg*M_PI/180);
-                    osi3::LidarDetectionBuilder lidar_detection_builder(builder);
-                    lidar_detection_builder.add_position(detection_position);
-                    lidar_detection_vector.push_back(lidar_detection_builder.Finish());
+
+                    auto detection_position = std::unique_ptr<osi3::Spherical3dT>(new osi3::Spherical3dT());
+                    detection_position->azimuth = azimuth_deg*M_PI/180;
+                    detection_position->distance = distance;
+                    detection_position->elevation = elevation_deg*M_PI/180;
+
+                    auto lidarDetection = std::unique_ptr<osi3::LidarDetectionT>(new osi3::LidarDetectionT());
+                    lidarDetection->position = std::move(detection_position);
+                    lidarDetectionData->detection.push_back(std::move(lidarDetection));
                 }
             }
+
+            auto featureData = std::unique_ptr<osi3::FeatureDataT>(new osi3::FeatureDataT());
+            featureData->lidar_sensor.push_back(std::move(lidarDetectionData));
+            sensorData->feature_data = std::move(featureData);
         }
-        auto lidar_detection_vector_flatvector = builder.CreateVector(lidar_detection_vector);
-        auto lidar_sensor_builder = osi3::LidarDetectionDataBuilder(builder);
-        lidar_sensor_builder.add_detection(lidar_detection_vector_flatvector);
-        auto lidar_sensor = lidar_sensor_builder.Finish();
-        std::vector<flatbuffers::Offset<osi3::LidarDetectionData>> lidar_sensor_vector;
-        lidar_sensor_vector.push_back(lidar_sensor);
-        auto lidar_sensor_vector_flatvector = builder.CreateVector(lidar_sensor_vector);
-        auto feature_data_builder = osi3::FeatureDataBuilder(builder);
-        feature_data_builder.add_lidar_sensor(lidar_sensor_vector_flatvector);
-        auto feature_data = feature_data_builder.Finish();
 #endif
         //// Moving Objects
         double ego_x=0, ego_y=0, ego_z=0;
@@ -354,7 +355,6 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         }
         normal_log("OSI","Current Ego Position: %f,%f,%f", ego_x, ego_y, ego_z);
 
-        std::vector<flatbuffers::Offset<osi3::DetectedMovingObject>> detected_moving_object_vector;
         int moving_obj_counter=0;
         double actual_range = fmi_nominal_range()*1.1;
 
@@ -435,6 +435,9 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
 
                     normal_log("OSI","Output Vehicle %d[%llu] Probability %f Relative Position: %f,%f,%f (%f,%f,%f)",obj_idx,current_obj->id()->value(),detObj->header->existence_probability,rel_x,rel_y,rel_z,detObj->base->position->x,detObj->base->position->y,detObj->base->position->z);
                     moving_obj_counter++;
+
+                    // add DetectedMovingObject to SensorData
+                    sensorData->moving_object.push_back(std::move(detObj));
                 } else {
                     normal_log("OSI", "Ignoring Vehicle %d[%llu] Outside Sensor Scope Relative Position: %f,%f,%f (%f,%f,%f)", moving_obj_counter, current_obj->id()->value(), current_obj->base()->position()->x() - ego_x, current_obj->base()->position()->y() - ego_y, current_obj->base()->position()->z() - ego_z, current_obj->base()->position()->x(), current_obj->base()->position()->y(), current_obj->base()->position()->z());
                 }
@@ -444,28 +447,19 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
                 normal_log("OSI", "Ignoring EGO Vehicle %d[%llu] Relative Position: %f,%f,%f (%f,%f,%f)", moving_obj_counter, current_obj->id()->value(), current_obj->base()->position()->x() - ego_x, current_obj->base()->position()->y() - ego_y, current_obj->base()->position()->z() - ego_z, current_obj->base()->position()->x(), current_obj->base()->position()->y(), current_obj->base()->position()->z());
             }
         }
-        auto detected_moving_object_flatvector = builder.CreateVector(detected_moving_object_vector);
 
         //auto interface_version = osi3::CreateInterfaceVersion(builder,sensor_view_in->version()->version_major(), sensor_view_in->version()->version_minor(), sensor_view_in->version()->version_patch());    //todo: not implemented in source
-        auto timestamp = osi3::CreateTimestamp(builder, (int64_t)floor(time), (int)((time - floor(time))*1000000000.0));
+        auto timeStamp = std::unique_ptr<osi3::TimestampT>(new osi3::TimestampT());
+        timeStamp->seconds = (int64_t)floor(time);
+        timeStamp->nanos = (uint32_t)((time - floor(time))*1000000000.0);
+        sensorData->timestamp = std::move(timeStamp);
 
         /* Copy SensorView */
         //currentOut.add_sensor_view()->CopyFrom(sensor_view_in);   //todo: copying a serialized buffer into another buffer is not that easy in Flatbuffers
 
-        osi3::SensorDataBuilder sensor_data_builder(builder);
-        sensor_data_builder.add_timestamp(timestamp);
-        //sensor_data_builder.add_version(interface_version);
-        sensor_data_builder.add_moving_object(detected_moving_object_flatvector);
-#ifndef NO_LIDAR_DETECTIONS
-        if (sensor_view_in->lidar_sensor_view()) {
-            sensor_data_builder.add_feature_data(feature_data);
-        }
-#endif
-        auto sensor_data = sensor_data_builder.Finish();
-
         auto startOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
 
-        builder.Finish(sensor_data);
+        builder.Finish(osi3::SensorData::Pack(builder, sensorData.get()));
         auto uint8_buffer = builder.GetBufferPointer();
         auto size = builder.GetSize();
         std::string tmp_buffer(reinterpret_cast<char const*>(uint8_buffer), size);
