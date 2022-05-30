@@ -16,6 +16,8 @@
 
 #include "OSMPDummySensor.h"
 
+#define NO_LIDAR_REFLECTIONS
+
 /*
  * Debug Breaks
  *
@@ -304,11 +306,10 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
 
     if (sensor_view_in) {
         //// Lidar Detections
+#ifndef NO_LIDAR_REFLECTIONS
         std::vector<flatbuffers::Offset<osi3::LidarDetection>> lidar_detection_vector;
         if (sensor_view_in->lidar_sensor_view()) {
-            int no_of_layers = 32;                  // the number of layers of every lidar front-end
             double azimuth_fov = 360.0;             // Azimuth angle FoV in °
-            int rays_per_beam_vertical = 3;         // vertical super-sampling factor
             int rays_per_beam_horizontal = 6;       // horizontal super-sampling factor
             double beam_step_azimuth = 0.2;         // horizontal step-size per beam in degrees of VLP32 at 600 rpm (10 Hz) with VLP32's fixed firing_cycle of 55.296e^(-6) s
             double beam_step_elevation = 0.3;       // simplified equidistant beam spacing
@@ -343,7 +344,7 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         auto feature_data_builder = osi3::FeatureDataBuilder(builder);
         feature_data_builder.add_lidar_sensor(lidar_sensor_vector_flatvector);
         auto feature_data = feature_data_builder.Finish();
-
+#endif
         //// Moving Objects
         double ego_x=0, ego_y=0, ego_z=0;
         const osi3::Identifier* ego_id = sensor_view_in->global_ground_truth()->host_vehicle_id();
@@ -440,9 +441,11 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         sensor_data_builder.add_timestamp(timestamp);
         //sensor_data_builder.add_version(interface_version);
         sensor_data_builder.add_moving_object(detected_moving_object_flatvector);
+#ifndef NO_LIDAR_REFLECTIONS
         if (sensor_view_in->lidar_sensor_view()) {
             sensor_data_builder.add_feature_data(feature_data);
         }
+#endif
         auto sensor_data = sensor_data_builder.Finish();
 
         auto startOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
