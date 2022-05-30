@@ -20,6 +20,7 @@ Traffic participant models may internally use environmental effect models, senso
 They may also be used to implement surrounding traffic in simplified ways.
 Traffic participant models consume `osi3::SensorView` as input and produce `osi3::TrafficUpdate` as output.
 They may also consume `osi3::TrafficCommand` as input to allow control by a scenario engine or other coordinating function.
+They may also produce `osi3::TrafficCommandUpdate` as output to allow status responses to such control messages.
 
 All models may also consume a global `osi3::GroundTruth` parameter during initialization.
 
