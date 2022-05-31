@@ -16,7 +16,7 @@ Add @mentions of the person or team responsible for reviewing proposed changes.
 #### Check the checklist
 
 - [ ] I have performed a self-review of my own code.
-- [ ] I have made corresponding changes to the [documentation](https://github.com/OpenSimulationInterface/osi-documentation) for osi-sensor-model-packaging.
+- [ ] I have made corresponding changes to the [documentation](https://github.com/OpenSimulationInterface/osi-documentation) for osi-simulation-model-packaging.
 - [ ] My changes generate no new warnings.
 - [ ] I have added tests that prove my fix is effective or that my feature works.
 - [ ] New and existing unit tests / Github Actions pass locally with my changes.

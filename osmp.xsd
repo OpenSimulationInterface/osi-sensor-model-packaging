@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"
-    targetNamespace="http://xsd.pmsf.net/OSISensorModelPackaging" elementFormDefault="qualified"
+    xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" xmlns:osmp="http://xsd.pmsf.net/OSISimulationModelPackaging"
+    targetNamespace="http://xsd.pmsf.net/OSISimulationModelPackaging" elementFormDefault="qualified"
     vc:minVersion="1.0" vc:maxVersion="1.1">
     <xs:element name="osmp">
         <xs:complexType>

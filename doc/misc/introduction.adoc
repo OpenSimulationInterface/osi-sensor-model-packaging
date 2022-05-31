@@ -1,6 +1,6 @@
 = Introduction
 
-_OSI Sensor Model Packaging_ (OSMP) is a package layer specification for the _Open Simulation Interface_ (OSI).
+_OSI Simulation Model Packaging_ (OSMP) is a package layer specification for the _Open Simulation Interface_ (OSI).
 It specifies how models that use OSI are packaged as _Functional Mock-up Units_ (FMUs) in accordance with the _Functional Mock-up Interface 2.0_ (FMI 2.0).
 
 This is version 1.2.0 of this specification. The version number is to be

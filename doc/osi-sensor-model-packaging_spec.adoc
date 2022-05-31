@@ -15,7 +15,7 @@ include::{asciidoc-resources}/preamble.adoc[]
 
 endif::[]
 
-= OSI Sensor Model Packaging
+= OSI Simulation Model Packaging
 
 include::./misc/introduction.adoc[leveloffset=+1]
 

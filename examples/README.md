@@ -1,4 +1,4 @@
-OSI Sensor Model Packaging Examples
+OSI Simulation Model Packaging Examples
 ===================================
 
 The examples in this directory can be built using CMake.
