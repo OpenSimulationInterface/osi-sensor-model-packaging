@@ -6,23 +6,28 @@ import os
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_10/flatb_builder'
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_200/flatb_builder'
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_500/flatb_builder'
-#json_directory = '/home/martin/development/flatbuf_test_data/lidar_200k/flatb_builder'
+#json_directory = '/home/martin/development/flatbuf_test_data/lidar_100k/flatb_builder'
 #json_directory = '/home/martin/development/flatbuf_test_data/lidar_400k/flatb_builder'
 #json_directory = '/home/martin/development/flatbuf_test_data/lidar_830k/flatb_builder'
+
+############ FLATB INTERNAL STRUCT ###########
+json_directory = '/home/martin/development/flatbuf_test_data/objects_10/flatb_internal_struct'
+#json_directory = '/home/martin/development/flatbuf_test_data/objects_200/flatb_internal_struct'
+#json_directory = '/home/martin/development/flatbuf_test_data/objects_500/flatb_internal_struct'
 
 ############### FLATB OBJECT API #############
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_10/flatb_object_api'
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_200/flatb_object_api'
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_500/flatb_object_api'
-#json_directory = '/home/martin/development/flatbuf_test_data/lidar_200k/flatb_object_api'
-json_directory = '/home/martin/development/flatbuf_test_data/lidar_400k/flatb_object_api'
+#json_directory = '/home/martin/development/flatbuf_test_data/lidar_100k/flatb_object_api'
+#json_directory = '/home/martin/development/flatbuf_test_data/lidar_400k/flatb_object_api'
 #json_directory = '/home/martin/development/flatbuf_test_data/lidar_830k/flatb_object_api'
 
 ############### PROTOB #######################
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_10/protob'
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_200/protob'
 #json_directory = '/home/martin/development/flatbuf_test_data/objects_500/protob'
-#json_directory = '/home/martin/development/flatbuf_test_data/lidar_200k/protob'
+#json_directory = '/home/martin/development/flatbuf_test_data/lidar_100k/protob'
 #json_directory = '/home/martin/development/flatbuf_test_data/lidar_400k/protob'
 #json_directory = '/home/martin/development/flatbuf_test_data/lidar_830k/protob'
 

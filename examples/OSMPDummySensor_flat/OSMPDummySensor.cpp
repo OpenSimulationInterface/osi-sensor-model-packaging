@@ -237,6 +237,10 @@ fmi2Status COSMPDummySensor::doInit()
 fmi2Status COSMPDummySensor::doStart(fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime)
 {
     DEBUGBREAK();
+    auto timeStamp = std::unique_ptr<osi3::TimestampT>(new osi3::TimestampT());
+    timeStamp->seconds = 0;
+    timeStamp->nanos = 0;
+    sensorData.timestamp = std::move(timeStamp);
 
     return fmi2OK;
 }
@@ -288,7 +292,6 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
 {
     DEBUGBREAK();
     flatbuffers::FlatBufferBuilder builder(1024);
-    auto sensorData = std::unique_ptr<osi3::SensorDataT>(new osi3::SensorDataT());
 
     double time = currentCommunicationPoint+communicationStepSize;
     auto startOSIDeserialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
@@ -335,10 +338,10 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
 
             auto featureData = std::unique_ptr<osi3::FeatureDataT>(new osi3::FeatureDataT());
             featureData->lidar_sensor.push_back(std::move(lidarDetectionData));
-            sensorData->feature_data = std::move(featureData);
+            sensorData.feature_data = std::move(featureData);
         }
 #endif
-        //// Moving Objects
+        // Get ego position
         double ego_x=0, ego_y=0, ego_z=0;
         const osi3::Identifier* ego_id = sensor_view_in->global_ground_truth()->host_vehicle_id();
         normal_log("OSI","Looking for EgoVehicle with ID: %llu",ego_id->value());
@@ -357,10 +360,15 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
 
         int moving_obj_counter=0;
         double actual_range = fmi_nominal_range()*1.1;
+//std::cout << "Sensor::doStart BEGIN moving obj. num.: " << sensorData.moving_object.size() << std::endl;
+        // Moving Objects
+        for (size_t objNum = 0; objNum < num_moving_obj; objNum++)
+        {
+            auto current_obj = sensor_view_in->global_ground_truth()->moving_object()->Get(objNum);
+            const auto curObjID = current_obj->id()->value();
 
-        for (size_t obj_idx = 0; obj_idx < num_moving_obj; obj_idx++) {
-            auto current_obj = sensor_view_in->global_ground_truth()->moving_object()->Get(obj_idx);
-            if (current_obj->id()->value() != ego_id->value()) {
+            if (curObjID != ego_id->value())
+            {
                 // NOTE: We currently do not take sensor mounting position into account,
                 // i.e. sensor-relative coordinates are relative to center of bounding box
                 // of ego vehicle currently.
@@ -370,75 +378,118 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
                 double rel_x,rel_y,rel_z;
                 rotatePoint(trans_x, trans_y, trans_z, current_obj->base()->orientation()->yaw(), current_obj->base()->orientation()->pitch(), current_obj->base()->orientation()->roll(), rel_x, rel_y, rel_z);
                 double distance = sqrt(rel_x*rel_x + rel_y*rel_y + rel_z*rel_z);
-                if ((distance <= actual_range) && (rel_x/distance > 0.866025)) {
 
-                    /* Object hierarchy
+                // Search for object in SensorData
+                const auto sensorDataID2Idx = objIndexMap.find(curObjID);
 
-                        I) DetectedMovingObject
-                            1) Header:
-                                a) GT ID
-                                b) Tracking ID
-                                c) Ext. Probability
-                                d) Meas. state
-                                e) Sensor ID
-                            2) Base
-                                a) Position
-                                b) Dimension
-                            3) Candidate
-                    */
+                if ((distance <= actual_range) && (rel_x/distance > 0.866025))
+                {
+                    // Object not found --> create
+                    if (sensorDataID2Idx == objIndexMap.end())
+                    {
+                        /* Object hierarchy
 
-                    // I)
-                    auto detObj = std::unique_ptr<osi3::DetectedMovingObjectT>(new osi3::DetectedMovingObjectT());
+                            I) DetectedMovingObject
+                                1) Header:
+                                    a) GT ID
+                                    b) Tracking ID
+                                    c) Ext. Probability
+                                    d) Meas. state
+                                    e) Sensor ID
+                                2) Base
+                                    a) Position
+                                    b) Dimension
+                                3) Candidate
+                        */
 
-                    // 1) BEGIN
-                    auto detObjHeader = std::unique_ptr<osi3::DetectedItemHeaderT>(new osi3::DetectedItemHeaderT());
-                    // 1a)
-                    auto gt_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
-                    gt_id->value = current_obj->id()->value();
-                    detObjHeader->ground_truth_id.push_back(std::move(gt_id));
-                    // 1b)
-                    auto tr_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
-                    tr_id->value = moving_obj_counter;
-                    detObjHeader->tracking_id = std::move(tr_id);
-                    // 1c)
-                    detObjHeader->existence_probability = cos((2.0 * distance - actual_range) / actual_range);
-                    // 1d)
-                    detObjHeader->measurement_state = osi3::DetectedItemHeader_::MeasurementState::MEASUREMENT_STATE_MEASURED;
-                    // 1e)
-                    auto sens_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
-                    sens_id->value = sensor_view_in->sensor_id()->value();
-                    detObjHeader->sensor_id.push_back(std::move(sens_id));
-                    // 1) END
-                    detObj->header = std::move(detObjHeader);
+                        // I)
+                        auto detObj = std::unique_ptr<osi3::DetectedMovingObjectT>(new osi3::DetectedMovingObjectT());
 
-                    // 2) BEGIN
-                    auto base = std::unique_ptr<osi3::BaseMovingT>(new osi3::BaseMovingT());
-                    // 2a)
-                    auto pos = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
-                    pos->x = rel_x;
-                    pos->y = rel_y;
-                    pos->z = rel_z;
-                    base->position = std::move(pos);
-                    // 2b)
-                    auto dim = std::unique_ptr<osi3::Dimension3dT>(new osi3::Dimension3dT());
-                    dim->height = current_obj->base()->dimension()->height();
-                    dim->length = current_obj->base()->dimension()->length();
-                    dim->width = current_obj->base()->dimension()->width();
-                    base->dimension = std::move(dim);
-                    // 2) END
-                    detObj->base = std::move(base);
+                        // 1) BEGIN
+                        auto detObjHeader = std::unique_ptr<osi3::DetectedItemHeaderT>(new osi3::DetectedItemHeaderT());
+                        // 1a)
+                        auto gt_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
+                        gt_id->value = current_obj->id()->value();
+                        detObjHeader->ground_truth_id.push_back(std::move(gt_id));
+                        // 1b)
+                        auto tr_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
+                        tr_id->value = moving_obj_counter;
+                        detObjHeader->tracking_id = std::move(tr_id);
+                        // 1c)
+                        detObjHeader->existence_probability = cos((2.0 * distance - actual_range) / actual_range);
+                        // 1d)
+                        detObjHeader->measurement_state = osi3::DetectedItemHeader_::MeasurementState::MEASUREMENT_STATE_MEASURED;
+                        // 1e)
+                        auto sens_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
+                        sens_id->value = sensor_view_in->sensor_id()->value();
+                        detObjHeader->sensor_id.push_back(std::move(sens_id));
+                        // 1) END
+                        detObj->header = std::move(detObjHeader);
 
-                    // 3)
-                    auto cand = std::unique_ptr<osi3::DetectedMovingObject_::CandidateMovingObjectT>(new osi3::DetectedMovingObject_::CandidateMovingObjectT());
-                    cand->probability = 1;
-                    detObj->candidate.push_back(std::move(cand));
+                        // 2) BEGIN
+                        auto base = std::unique_ptr<osi3::BaseMovingT>(new osi3::BaseMovingT());
+                        // 2a)
+                        auto pos = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
+                        pos->x = rel_x;
+                        pos->y = rel_y;
+                        pos->z = rel_z;
+                        base->position = std::move(pos);
+                        // 2b)
+                        auto dim = std::unique_ptr<osi3::Dimension3dT>(new osi3::Dimension3dT());
+                        dim->height = current_obj->base()->dimension()->height();
+                        dim->length = current_obj->base()->dimension()->length();
+                        dim->width = current_obj->base()->dimension()->width();
+                        base->dimension = std::move(dim);
+                        // 2) END
+                        detObj->base = std::move(base);
 
-                    normal_log("OSI","Output Vehicle %d[%llu] Probability %f Relative Position: %f,%f,%f (%f,%f,%f)",obj_idx,current_obj->id()->value(),detObj->header->existence_probability,rel_x,rel_y,rel_z,detObj->base->position->x,detObj->base->position->y,detObj->base->position->z);
+                        // 3)
+                        auto cand = std::unique_ptr<osi3::DetectedMovingObject_::CandidateMovingObjectT>(new osi3::DetectedMovingObject_::CandidateMovingObjectT());
+                        cand->probability = 1;
+                        detObj->candidate.push_back(std::move(cand));
+
+                        normal_log("OSI","CREATE Vehicle %d[%llu] Probability %f Relative Position: %f,%f,%f (%f,%f,%f)",objNum,current_obj->id()->value(),detObj->header->existence_probability,rel_x,rel_y,rel_z,detObj->base->position->x,detObj->base->position->y,detObj->base->position->z);
+
+                        // add DetectedMovingObject to SensorData
+                        sensorData.moving_object.push_back(std::move(detObj));
+                        objIndexMap[curObjID] = sensorData.moving_object.size() - 1;
+                    }
+                    else // Update object
+                    {
+                        const auto sensorDataIdx = sensorDataID2Idx->second;
+
+                        // Header update
+                        sensorData.moving_object[sensorDataIdx]->header->existence_probability = cos((2.0 * distance - actual_range) / actual_range);
+                        sensorData.moving_object[sensorDataIdx]->header->tracking_id->value = moving_obj_counter;
+                        sensorData.moving_object[sensorDataIdx]->header->measurement_state = osi3::DetectedItemHeader_::MeasurementState::MEASUREMENT_STATE_MEASURED;
+                        // TODO: sensor ID????
+
+                        sensorData.moving_object[sensorDataIdx]->base->position->x = rel_x;
+                        sensorData.moving_object[sensorDataIdx]->base->position->y = rel_y;
+                        sensorData.moving_object[sensorDataIdx]->base->position->z = rel_z;
+
+                        normal_log("OSI","UPDATE Vehicle %d[%llu] Probability %f Relative Position: %f,%f,%f (%f,%f,%f)",objNum,current_obj->id()->value(),
+                            sensorData.moving_object[sensorDataIdx]->header->existence_probability,rel_x,rel_y,rel_z,sensorData.moving_object[sensorDataIdx]->base->position->x,
+                            sensorData.moving_object[sensorDataIdx]->base->position->y, sensorData.moving_object[sensorDataIdx]->base->position->z);
+                    }
+
                     moving_obj_counter++;
+                }
+                else
+                {
+                    // Object was detected before --> remove it from SensorData
+                    if (sensorDataID2Idx != objIndexMap.end())
+                    {
+                        const auto sensorDataIdx = sensorDataID2Idx->second;
 
-                    // add DetectedMovingObject to SensorData
-                    sensorData->moving_object.push_back(std::move(detObj));
-                } else {
+                        // update object index map (erasing invalidates indices behind)
+                        for (int i = sensorDataIdx + 1; i < sensorData.moving_object.size(); i++)
+                            objIndexMap[sensorData.moving_object[i]->header->ground_truth_id[0]->value] -= 1;
+                    
+                        sensorData.moving_object.erase(sensorData.moving_object.begin() + sensorDataIdx);
+                        objIndexMap.erase(sensorDataID2Idx->first);
+                    }
+
                     normal_log("OSI", "Ignoring Vehicle %d[%llu] Outside Sensor Scope Relative Position: %f,%f,%f (%f,%f,%f)", moving_obj_counter, current_obj->id()->value(), current_obj->base()->position()->x() - ego_x, current_obj->base()->position()->y() - ego_y, current_obj->base()->position()->z() - ego_z, current_obj->base()->position()->x(), current_obj->base()->position()->y(), current_obj->base()->position()->z());
                 }
             }
@@ -447,19 +498,17 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
                 normal_log("OSI", "Ignoring EGO Vehicle %d[%llu] Relative Position: %f,%f,%f (%f,%f,%f)", moving_obj_counter, current_obj->id()->value(), current_obj->base()->position()->x() - ego_x, current_obj->base()->position()->y() - ego_y, current_obj->base()->position()->z() - ego_z, current_obj->base()->position()->x(), current_obj->base()->position()->y(), current_obj->base()->position()->z());
             }
         }
-
+//std::cout << "Sensor::doStart END moving obj. num.: " << sensorData.moving_object.size() << std::endl;
         //auto interface_version = osi3::CreateInterfaceVersion(builder,sensor_view_in->version()->version_major(), sensor_view_in->version()->version_minor(), sensor_view_in->version()->version_patch());    //todo: not implemented in source
-        auto timeStamp = std::unique_ptr<osi3::TimestampT>(new osi3::TimestampT());
-        timeStamp->seconds = (int64_t)floor(time);
-        timeStamp->nanos = (uint32_t)((time - floor(time))*1000000000.0);
-        sensorData->timestamp = std::move(timeStamp);
+        sensorData.timestamp->seconds = (int64_t)floor(time);
+        sensorData.timestamp->nanos = (uint32_t)((time - floor(time))*1000000000.0);
 
         /* Copy SensorView */
         //currentOut.add_sensor_view()->CopyFrom(sensor_view_in);   //todo: copying a serialized buffer into another buffer is not that easy in Flatbuffers
 
         auto startOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
 
-        builder.Finish(osi3::SensorData::Pack(builder, sensorData.get()));
+        builder.Finish(osi3::SensorData::Pack(builder, &sensorData));
         auto uint8_buffer = builder.GetBufferPointer();
         auto size = builder.GetSize();
         std::string tmp_buffer(reinterpret_cast<char const*>(uint8_buffer), size);

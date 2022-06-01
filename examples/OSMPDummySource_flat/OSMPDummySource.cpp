@@ -12,7 +12,7 @@
 
 #define NO_LIDAR_REFLECTIONS
 #define LIDAR_NUM_LAYERS 32
-#define OBJECTS_MULT 50
+#define OBJECTS_MULT 1
 
 /*
  * Debug Breaks
@@ -164,6 +164,87 @@ fmi2Status COSMPDummySource::doStart(fmi2Boolean toleranceDefined, fmi2Real tole
 {
     DEBUGBREAK();
 
+    // initialize data structure
+    // 1) sensor and ego IDs, timestamps
+    auto sensor_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
+    sensor_id->value = 1000;
+    sensorViewOut.sensor_id = std::move(sensor_id);
+    auto host_vehicle_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
+    host_vehicle_id->value = 14;
+    sensorViewOut.host_vehicle_id = std::move(host_vehicle_id);
+
+    auto timestamp = std::unique_ptr<osi3::TimestampT>(new osi3::TimestampT());
+    timestamp->seconds = 0;
+    timestamp->nanos = 0;
+    sensorViewOut.timestamp = std::move(timestamp);
+
+    // ground truth
+    auto currentGT = std::unique_ptr<osi3::GroundTruthT>(new osi3::GroundTruthT());
+    sensorViewOut.global_ground_truth = std::move(currentGT);
+    auto gt_host_vehicle_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
+    gt_host_vehicle_id->value = 14;
+    sensorViewOut.global_ground_truth->host_vehicle_id = std::move(gt_host_vehicle_id);
+
+    auto gt_timestamp = std::unique_ptr<osi3::TimestampT>(new osi3::TimestampT());
+    gt_timestamp->seconds = 0;
+    gt_timestamp->nanos = 0;
+    sensorViewOut.global_ground_truth->timestamp = std::move(gt_timestamp);
+
+    // initialize Moving Objects
+    for (unsigned int i = 0; i < (10 * OBJECTS_MULT); i++)
+    {
+        auto veh = std::unique_ptr<osi3::MovingObjectT>(new osi3::MovingObjectT());
+        auto veh_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
+        veh_id->value = 10 + i;
+        veh->id = std::move(veh_id);
+        //veh.type = osi3::MovingObject_::Type::TYPE_VEHICLE;     //todo: vehicle types are wrong in headers due to namespace conflict -> stationary and moving are confused
+        //veh.vehicle_classification->type = source_veh_types[i]; //todo: vehicle classifications are wrong in headers due to namespace conflict -> confused with moving object type
+        //veh.vehicle_classification->light_state->indicator_state = osi3::MovingObject_::VehicleClassification_::LightState_::IndicatorState::INDICATOR_STATE_OFF;
+        //veh.vehicle_classification->light_state->brake_light_state = osi3::MovingObject_::VehicleClassification_::LightState_::BrakeLightState::BRAKE_LIGHT_STATE_OFF;
+        auto vehicle_attributes = std::unique_ptr<osi3::MovingObject_::VehicleAttributesT>(new osi3::MovingObject_::VehicleAttributesT());
+        auto bbcenter_to_rear = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
+        bbcenter_to_rear->x = 1;
+        bbcenter_to_rear->y = 0;
+        bbcenter_to_rear->x = -0.3;
+        vehicle_attributes->bbcenter_to_rear = std::move(bbcenter_to_rear);
+        veh->vehicle_attributes = std::move(vehicle_attributes);
+        auto base = std::unique_ptr<osi3::BaseMovingT>(new osi3::BaseMovingT());
+        auto dimension = std::unique_ptr<osi3::Dimension3dT>(new osi3::Dimension3dT());
+        dimension->height = 1.5;
+        dimension->width = 2.0;
+        dimension->length = 5.0;
+        base->dimension = std::move(dimension);
+        const auto x_speed = source_x_speeds[i % 10];
+        auto base_position = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
+        base_position->x = source_x_offsets[i % 10];
+        base_position->y = source_y_offsets[i % 10];
+        base_position->z = 0.0;
+        base->position = std::move(base_position);
+        auto velocity = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
+        velocity->x = x_speed;
+        velocity->y = 0.25 / x_speed;
+        velocity->z = 0.0;
+        base->velocity = std::move(velocity);
+        auto acceleration = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
+        acceleration->x = 0.0;
+        acceleration->y = 0.0;
+        acceleration->z = 0.0;
+        base->acceleration = std::move(acceleration);
+        auto orientation = std::unique_ptr<osi3::Orientation3dT>(new osi3::Orientation3dT());
+        orientation->pitch = 0.0;
+        orientation->roll = 0.0;
+        orientation->yaw = 0.0;
+        base->orientation = std::move(orientation);
+        auto orientation_rate = std::unique_ptr<osi3::Orientation3dT>(new osi3::Orientation3dT());
+        orientation_rate->pitch = 0.0;
+        orientation_rate->roll = 0.0;
+        orientation_rate->yaw = 0.0;
+        base->orientation_rate = std::move(orientation_rate);
+        veh->base = std::move(base);
+        normal_log("OSI","GT: Adding Vehicle %d[%llu] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)",i,veh->id->value,veh->base->position->x,veh->base->position->y,veh->base->position->z,veh->base->velocity->x,veh->base->velocity->y,veh->base->velocity->z);
+        sensorViewOut.global_ground_truth->moving_object.push_back(std::move(veh));
+    }
+
     return fmi2OK;
 }
 
@@ -206,34 +287,19 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     auto start_source_calc = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
 
     flatbuffers::FlatBufferBuilder builder(1024);
-    osi3::SensorViewT currentOut;
+    
     double time = currentCommunicationPoint+communicationStepSize;
 
     normal_log("OSI","Calculating SensorView at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
 
-    /* We act as GroundTruth Source */
+    // Update time
+    sensorViewOut.timestamp->seconds = (long long int)floor(time);
+    sensorViewOut.timestamp->nanos = (int)((time - floor(time))*1000000000.0);
+    
+    sensorViewOut.global_ground_truth->timestamp->seconds = (long long int)floor(time);
+    sensorViewOut.global_ground_truth->timestamp->nanos = (int)((time - floor(time))*1000000000.0);
 
-    //currentOut.mutable_version->CopyFrom(osi3::InterfaceVersion::descriptor->file->options->GetExtension(osi3::current_interface_version));
-    auto sensor_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
-    sensor_id->value = 1000;
-    currentOut.sensor_id = std::move(sensor_id);
-    auto host_vehicle_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
-    host_vehicle_id->value = 14;
-    currentOut.host_vehicle_id = std::move(host_vehicle_id);
-    auto timestamp = std::unique_ptr<osi3::TimestampT>(new osi3::TimestampT());
-    timestamp->seconds = (long long int)floor(time);
-    timestamp->nanos = (int)((time - floor(time))*1000000000.0);
-    currentOut.timestamp = std::move(timestamp);
-    auto currentGT = std::unique_ptr<osi3::GroundTruthT>(new osi3::GroundTruthT());
-    auto gt_timestamp = std::unique_ptr<osi3::TimestampT>(new osi3::TimestampT());
-    gt_timestamp->seconds = (long long int)floor(time);
-    gt_timestamp->nanos = (int)((time - floor(time))*1000000000.0);
-    currentGT->timestamp = std::move(gt_timestamp);
-    auto gt_host_vehicle_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
-    gt_host_vehicle_id->value = 14;
-    currentGT->host_vehicle_id = std::move(gt_host_vehicle_id);
-
-    //// Lidar Reflections
+    // Lidar Reflections
 #ifndef NO_LIDAR_REFLECTIONS
     auto lidar_sensor_view = std::unique_ptr<osi3::LidarSensorViewT>(new osi3::LidarSensorViewT());
     auto view_configuration = std::unique_ptr<osi3::LidarSensorViewConfigurationT>(new osi3::LidarSensorViewConfigurationT());
@@ -272,76 +338,27 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     currentOut.lidar_sensor_view.push_back(std::move(lidar_sensor_view));
 #endif
 
-    //// Moving Objects
-    static double source_y_offsets[10] = { 3.0, 3.0, 3.0, 0.25, 0, -0.25, -3.0, -3.0, -3.0, -3.0 };
-    static double source_x_offsets[10] = { 0.0, 40.0, 100.0, 100.0, 0.0, 150.0, 5.0, 45.0, 85.0, 125.0 };
-    static double source_x_speeds[10] = { 29.0, 30.0, 31.0, 25.0, 26.0, 28.0, 20.0, 22.0, 22.5, 23.0 };
-    static osi3::MovingObject_::VehicleClassification_::Type source_veh_types[10] = {
-            osi3::MovingObject_::VehicleClassification_::Type::TYPE_MEDIUM_CAR,
-            osi3::MovingObject_::VehicleClassification_::Type::TYPE_SMALL_CAR,
-            osi3::MovingObject_::VehicleClassification_::Type::TYPE_COMPACT_CAR,
-            osi3::MovingObject_::VehicleClassification_::Type::TYPE_DELIVERY_VAN,
-            osi3::MovingObject_::VehicleClassification_::Type::TYPE_LUXURY_CAR,
-            osi3::MovingObject_::VehicleClassification_::Type::TYPE_MEDIUM_CAR,
-            osi3::MovingObject_::VehicleClassification_::Type::TYPE_COMPACT_CAR,
-            osi3::MovingObject_::VehicleClassification_::Type::TYPE_SMALL_CAR,
-            osi3::MovingObject_::VehicleClassification_::Type::TYPE_MOTORBIKE,
-            osi3::MovingObject_::VehicleClassification_::Type::TYPE_BUS };
-
-
-    for (unsigned int i=0;i<(10*OBJECTS_MULT);i++) {
-        auto veh = std::unique_ptr<osi3::MovingObjectT>(new osi3::MovingObjectT());
-        auto veh_id = std::unique_ptr<osi3::IdentifierT>(new osi3::IdentifierT());
-        veh_id->value = 10+i;
-        veh->id = std::move(veh_id);
-        //veh.type = osi3::MovingObject_::Type::TYPE_VEHICLE;     //todo: vehicle types are wrong in headers due to namespace conflict -> stationary and moving are confused
-        //veh.vehicle_classification->type = source_veh_types[i]; //todo: vehicle classifications are wrong in headers due to namespace conflict -> confused with moving object type
-        //veh.vehicle_classification->light_state->indicator_state = osi3::MovingObject_::VehicleClassification_::LightState_::IndicatorState::INDICATOR_STATE_OFF;
-        //veh.vehicle_classification->light_state->brake_light_state = osi3::MovingObject_::VehicleClassification_::LightState_::BrakeLightState::BRAKE_LIGHT_STATE_OFF;
-        auto vehicle_attributes = std::unique_ptr<osi3::MovingObject_::VehicleAttributesT>(new osi3::MovingObject_::VehicleAttributesT());
-        auto bbcenter_to_rear = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
-        bbcenter_to_rear->x = 1;
-        bbcenter_to_rear->y = 0;
-        bbcenter_to_rear->x = -0.3;
-        vehicle_attributes->bbcenter_to_rear = std::move(bbcenter_to_rear);
-        veh->vehicle_attributes = std::move(vehicle_attributes);
-        auto base = std::unique_ptr<osi3::BaseMovingT>(new osi3::BaseMovingT());
-        auto dimension = std::unique_ptr<osi3::Dimension3dT>(new osi3::Dimension3dT());
-        dimension->height = 1.5;
-        dimension->width = 2.0;
-        dimension->length = 5.0;
-        base->dimension = std::move(dimension);
+    // Moving Objects
+    for (unsigned int i = 0; i < (10 * OBJECTS_MULT); i++)
+    {
         const auto x_speed = source_x_speeds[i % 10];
-        auto base_position = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
-        base_position->x = source_x_offsets[i % 10]+time*x_speed;
-        base_position->y = source_y_offsets[i % 10]+sin(time/x_speed)*0.25;
-        base_position->z = 0.0;
-        base->position = std::move(base_position);
-        auto velocity = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
-        velocity->x = x_speed;
-        velocity->y = cos(time/x_speed)*0.25/x_speed;
-        velocity->z = 0.0;
-        base->velocity = std::move(velocity);
-        auto acceleration = std::unique_ptr<osi3::Vector3dT>(new osi3::Vector3dT());
-        acceleration->x = 0.0;
-        acceleration->y = -sin(time/x_speed)*0.25/(x_speed*x_speed);
-        acceleration->z = 0.0;
-        base->acceleration = std::move(acceleration);
-        auto orientation = std::unique_ptr<osi3::Orientation3dT>(new osi3::Orientation3dT());
-        orientation->pitch = 0.0;
-        orientation->roll = 0.0;
-        orientation->yaw = 0.0;
-        base->orientation = std::move(orientation);
-        auto orientation_rate = std::unique_ptr<osi3::Orientation3dT>(new osi3::Orientation3dT());
-        orientation_rate->pitch = 0.0;
-        orientation_rate->roll = 0.0;
-        orientation_rate->yaw = 0.0;
-        base->orientation_rate = std::move(orientation_rate);
-        veh->base = std::move(base);
-        normal_log("OSI","GT: Adding Vehicle %d[%llu] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)",i,veh->id->value,veh->base->position->x,veh->base->position->y,veh->base->position->z,veh->base->velocity->x,veh->base->velocity->y,veh->base->velocity->z);
-        currentGT->moving_object.push_back(std::move(veh));
+        auto base = sensorViewOut.global_ground_truth->moving_object[i]->base.get();
+
+        base->position->x = source_x_offsets[i % 10] + time * x_speed;
+        base->position->y = source_y_offsets[i % 10] + sin(time / x_speed) * 0.25;
+        //base->position->z = 0.0;
+
+        base->velocity->x = x_speed;
+        base->velocity->y = cos(time / x_speed) * 0.25 / x_speed;
+        //base->velocity->z = 0.0;
+
+        //base->acceleration->x = 0.0;
+        base->acceleration->y = -sin(time / x_speed) * 0.25 / (x_speed * x_speed);
+        //base->acceleration->z = 0.0;
+
+        normal_log("OSI","GT: updating Vehicle %d[%llu] Absolute Position: %f,%f,%f Velocity (%f,%f,%f)", i, 10 + i, base->position->x, base->position->y, base->position->z, base->velocity->x, base->velocity->y, base->velocity->z);
     }
-    currentOut.global_ground_truth = std::move(currentGT);
+    
     std::cout << "DummySource time doCalc(): " << time << std::endl;
 
     //check if file exists
@@ -385,11 +402,11 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         logFile.open (fileName, std::ios_base::app);
     }
 
-    float osiSimTime = currentOut.global_ground_truth->timestamp->seconds + (float)currentOut.global_ground_truth->timestamp->nanos * 0.000000001;
+    float osiSimTime = sensorViewOut.global_ground_truth->timestamp->seconds + (float)sensorViewOut.global_ground_truth->timestamp->nanos * 0.000000001;
 
     auto startOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
 
-    builder.Finish(osi3::SensorView::Pack(builder, &currentOut));
+    builder.Finish(osi3::SensorView::Pack(builder, &sensorViewOut));
     auto uint8_buffer = builder.GetBufferPointer();
     auto size = builder.GetSize();
     std::string tmp_buffer(reinterpret_cast<char const*>(uint8_buffer), size);
@@ -397,7 +414,7 @@ fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
 
     set_fmi_sensor_view_out();
     set_fmi_valid(true);
-    set_fmi_count((int)currentOut.global_ground_truth->moving_object.size());
+    set_fmi_count((int)sensorViewOut.global_ground_truth->moving_object.size());
 
     auto stopOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
 

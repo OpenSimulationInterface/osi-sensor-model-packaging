@@ -79,6 +79,7 @@ using namespace std;
 #include <string>
 #include <cstdarg>
 #include <set>
+#include <unordered_map>
 
 #undef min
 #undef max
@@ -219,7 +220,9 @@ protected:
     fmi2Real fmi_nominal_range() { return real_vars[FMI_REAL_NOMINAL_RANGE_IDX]; }
     void set_fmi_nominal_range(fmi2Real value) { real_vars[FMI_REAL_NOMINAL_RANGE_IDX]=value; }
 
-    
+    osi3::SensorDataT sensorData;
+    std::unordered_map<uint64_t, uint64_t> objIndexMap;
+
     /* Protocol Buffer Accessors */
     bool get_fmi_sensor_view_config(osi3::SensorViewConfiguration& data);
     void set_fmi_sensor_view_config_request(const osi3::SensorViewConfiguration& data);

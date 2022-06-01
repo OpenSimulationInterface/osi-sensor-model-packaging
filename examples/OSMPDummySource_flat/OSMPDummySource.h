@@ -195,7 +195,24 @@ protected:
     string currentBuffer;
     string lastBuffer;
 
-            /* Simple Accessors */
+    osi3::SensorViewT sensorViewOut;
+
+    const double source_y_offsets[10] = { 3.0, 3.0, 3.0, 0.25, 0, -0.25, -3.0, -3.0, -3.0, -3.0 };
+    const double source_x_offsets[10] = { 0.0, 40.0, 100.0, 100.0, 0.0, 150.0, 5.0, 45.0, 85.0, 125.0 };
+    const double source_x_speeds[10] = { 29.0, 30.0, 31.0, 25.0, 26.0, 28.0, 20.0, 22.0, 22.5, 23.0 };
+    const osi3::MovingObject_::VehicleClassification_::Type source_veh_types[10] = {
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_MEDIUM_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_SMALL_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_COMPACT_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_DELIVERY_VAN,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_LUXURY_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_MEDIUM_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_COMPACT_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_SMALL_CAR,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_MOTORBIKE,
+            osi3::MovingObject_::VehicleClassification_::Type::TYPE_BUS };
+
+    /* Simple Accessors */
     fmi2Boolean fmi_valid() { return boolean_vars[FMI_BOOLEAN_VALID_IDX]; }
     void set_fmi_valid(fmi2Boolean value) { boolean_vars[FMI_BOOLEAN_VALID_IDX]=value; }
     fmi2Integer fmi_count() { return integer_vars[FMI_INTEGER_COUNT_IDX]; }
