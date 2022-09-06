@@ -1,5 +1,10 @@
 = Sensor view outputs
 
+ifndef::include-only-once[]
+:root-path: ../
+include::{root-path}_config.adoc[]
+endif::[]
+
 **Prefix**
 
 Sensor view outputs shall be named with the following prefix:

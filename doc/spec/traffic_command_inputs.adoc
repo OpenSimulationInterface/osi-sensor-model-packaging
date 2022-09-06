@@ -1,5 +1,10 @@
 = Traffic command inputs
 
+ifndef::include-only-once[]
+:root-path: ../
+include::{root-path}_config.adoc[]
+endif::[]
+
 Traffic command inputs are present in traffic participant models.
 This makes it possible to control the traffic participant behavior using scenario engines.
 

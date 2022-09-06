@@ -1,5 +1,10 @@
 = Sensor data inputs
 
+ifndef::include-only-once[]
+:root-path: ../
+include::{root-path}_config.adoc[]
+endif::[]
+
 **Prefix**
 
 Sensor data inputs shall be named with the following prefix:

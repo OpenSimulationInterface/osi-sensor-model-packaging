@@ -1,5 +1,10 @@
 = Sensor view input configuration
 
+ifndef::include-only-once[]
+:root-path: ../
+include::{root-path}_config.adoc[]
+endif::[]
+
 For each notional sensor view input variable with the base prefix `OSMPSensorViewIn`, a corresponding calculated parameter with the base prefix `OSMPSensorViewInConfigRequest` and a parameter with the base prefix `OSMPSensorViewInConfig` can exist.
 
 During FMI initialization mode, the simulation environment queries the value of `OSMPSensorViewInConfigRequest`.

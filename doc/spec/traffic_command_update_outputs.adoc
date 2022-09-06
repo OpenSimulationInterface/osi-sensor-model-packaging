@@ -1,5 +1,10 @@
 = Traffic command update outputs
 
+ifndef::include-only-once[]
+:root-path: ../
+include::{root-path}_config.adoc[]
+endif::[]
+
 Traffic command update outputs are present in traffic participant models.
 
 **Prefix**

@@ -1,22 +1,9 @@
-ifndef::THIS_STANDARD[] 
-
-:asciidoc-resources: ../asciidoc-resources
-include::{asciidoc-resources}/preamble.adoc[]
-
-:revnumber: --localbuild--
-:revdate: {docdate}
-
-:topicdir: topics
-:reusedir: reuse
-
-:imagesdir: .
-:images_open_simulation_interface: ./images
-
-
-endif::[]
-
+:root-path: ./
+include::{root-path}_config.adoc[]
 = OSI Sensor Model Packaging
 
+:antora_mapping: title;numbered
+ifndef::use-antora-rules[]
 include::./misc/introduction.adoc[leveloffset=+1]
 
 == OSMP specification
@@ -51,3 +38,5 @@ include::./setup/build_install_example.adoc[leveloffset=+2]
 
 include::./misc/example.adoc[leveloffset=+2]
 
+endif::[]
+:!antora-mapping:
