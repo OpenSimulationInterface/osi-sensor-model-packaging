@@ -1,9 +1,8 @@
-= Binary variables
-
 ifndef::include-only-once[]
 :root-path: ../
 include::{root-path}_config.adoc[]
 endif::[]
+= Binary variables
 
 FMI 2.0 cite:[fmi2.0] does not directly support the efficient exchange of arbitrary binary data between FMUs.
 OSMP therefore introduces the concept of notional binary variables that are mapped to actual integer variables for use with FMI 2.0 cite:[fmi2.0].

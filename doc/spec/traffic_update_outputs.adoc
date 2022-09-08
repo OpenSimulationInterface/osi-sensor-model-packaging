@@ -1,9 +1,8 @@
-= Traffic update outputs
-
 ifndef::include-only-once[]
 :root-path: ../
 include::{root-path}_config.adoc[]
 endif::[]
+= Traffic update outputs
 
 Traffic update outputs are present in traffic participant models.
 

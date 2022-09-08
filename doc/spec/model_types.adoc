@@ -1,9 +1,8 @@
-= Model types
-
 ifndef::include-only-once[]
 :root-path: ../
 include::{root-path}_config.adoc[]
 endif::[]
+= Model types
 
 The current specification supports packaging the following model types as _Functional Mock-up Units_ (FMUs):
 

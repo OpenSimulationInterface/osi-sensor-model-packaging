@@ -1,9 +1,8 @@
-= Sensor data inputs
-
 ifndef::include-only-once[]
 :root-path: ../
 include::{root-path}_config.adoc[]
 endif::[]
+= Sensor data inputs
 
 **Prefix**
 

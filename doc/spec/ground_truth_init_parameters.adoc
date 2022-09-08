@@ -1,9 +1,8 @@
-= Ground truth initialization parameters
-
 ifndef::include-only-once[]
 :root-path: ../
 include::{root-path}_config.adoc[]
 endif::[]
+= Ground truth initialization parameters
 
 All models can optionally consume `osi3::GroundTruth` via an initialization parameter called `OSMPGroundTruthInit`.
 Its purpose is to provide the model with a view of the static environment, for example the map, in OSI format.

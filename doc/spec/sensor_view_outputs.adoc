@@ -1,9 +1,8 @@
-= Sensor view outputs
-
 ifndef::include-only-once[]
 :root-path: ../
 include::{root-path}_config.adoc[]
 endif::[]
+= Sensor view outputs
 
 **Prefix**
 
