@@ -1,3 +1,7 @@
+ifndef::include-only-once[]
+:root-path: ../
+include::{root-path}_config.adoc[]
+endif::[]
 = Ground truth initialization parameters
 
 All models can optionally consume `osi3::GroundTruth` via an initialization parameter called `OSMPGroundTruthInit`.

@@ -1,3 +1,7 @@
+ifndef::include-only-once[]
+:root-path: ../
+include::{root-path}_config.adoc[]
+endif::[]
 = Basic conventions
 
 The model shall be packaged as a valid FMU for co-simulation, as specified in the FMI 2.0 standard cite:[fmi2.0].
