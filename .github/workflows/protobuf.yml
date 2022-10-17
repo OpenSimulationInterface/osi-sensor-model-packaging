@@ -27,10 +27,10 @@ jobs:
     # cache dependencies
     - name: Cache Dependencies
       id: cache-depends
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: protobuf-3.15.8
-        key: ${{ runner.os }}-v1-depends
+        key: ${{ runner.os }}-v2-depends
 
     # Download and build protobuf
     - name: Download ProtoBuf
