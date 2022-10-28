@@ -7,6 +7,8 @@ The specification can be found in the [doc/osi-sensor-model-packaging_spec.adoc]
 
 For more detailed information see the [official documentation](https://opensimulationinterface.github.io/osi-documentation/#_osi_sensor_model_packaging).
 
+<!-- TODO: Update link with new Antora hosting -->
+
 [Open Simulation Interface (OSI)]: https://github.com/OpenSimulationInterface/open-simulation-interface
 
 ## Usage

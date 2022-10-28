@@ -17,7 +17,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-set(OSMPVERSION "1.2.0" CACHE STRING "OSMP Version String")
+set(OSMPVERSION "1.3.0" CACHE STRING "OSMP Version String")
 
 add_subdirectory( open-simulation-interface )
 
