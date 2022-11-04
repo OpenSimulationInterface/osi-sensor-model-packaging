@@ -19,9 +19,9 @@ Demonstrates a simple C network proxy that can send and receive OSI data via TCP
 **Prerequisites**
 
 * You have installed _cmake_ version 3.10.2 or higher.
-* You have installed _protobuf_ version 3.0.0 or higher (or follow the instructions in the next section to build protobuf by using vcpkg).
+* You have installed _protobuf_ version 3.0.0 or higher (or follow the instructions in the next section to build protobuf by using vcpkg on Windows).
 
-**Profobuf Installation**
+**Profobuf Installation (Windows)**
 
 Using vcpkg to properly build the required configurations of protobuf on Visual Studio (here VS 2017):
 
@@ -64,16 +64,28 @@ cd osi-sensor-model-packaging
 git submodule update --init
 ----
 +
-. If you followed the protobuf installation instructions above you can use the built protobuf libraries to automatically build the examples by specifying the triplet and toolchain file from VCPKG on the cmake configuration command-line:
+. Run cmake and build
+.. If you followed the protobuf installation instructions for Windows above you can use the built protobuf libraries to automatically build the examples by specifying the triplet and toolchain file from VCPKG on the cmake configuration command-line:
 +
 ----
 cd examples
 mkdir build
 cd build
 cmake .. -DVCPKG_TARGET_TRIPLET=x64-windows-static-md-v141 -DCMAKE_TOOLCHAIN_FILE=../../../vcpkg/scripts/buildsystems/vcpkg.cmake -G 'Visual Studio 15 2017 Win64'
-cmake –build .
+cmake –-build .
 ----
 +
 
 The CMAKE_TOOLCHAIN_FILE must point to your vcpkg directory, which in this example was parallel to the osi-sensor-model-packaging directory.
 This might complain somewhat depending on cmake and compiler settings, but builds without problems (and should support release and debug builds out of the box).
+
+.. If you did not install and build protobuf as explained above, use:
++
+----
+cd examples
+mkdir build
+cd build
+cmake ..
+cmake --build .
+----
++
