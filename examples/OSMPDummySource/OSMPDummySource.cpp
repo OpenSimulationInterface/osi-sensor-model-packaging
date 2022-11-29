@@ -8,11 +8,15 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846
+#endif
+
 #include "OSMPDummySource.h"
 
 #define NO_LIDAR_REFLECTIONS
-#define LIDAR_NUM_LAYERS 32
-#define OBJECTS_MULT 1
+#define LIDAR_NUM_LAYERS 0
+#define OBJECTS_MULT 50
 
 /*
  * Debug Breaks
