@@ -12,9 +12,13 @@ jobs:
     name: Trigger antora generator
 
     runs-on: Ubuntu-latest
-
+    
+    env:
+      MUP_KEY: ${{ secrets.MACHINE_USER_PAT }}
+    
     steps:
     - name: Trigger generator
+      if: ${{ env.MUP_KEY != '' }}
       uses: peter-evans/repository-dispatch@v2
       with:
         token: ${{ secrets.MACHINE_USER_PAT }}
