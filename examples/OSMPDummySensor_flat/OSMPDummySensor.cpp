@@ -3,10 +3,16 @@
  *
  * (C) 2016 -- 2018 PMSF IT Consulting Pierre R. Mai
  *
+ * (C) 2022 Persival GmbH Clemens Linnhoff
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
+#endif
 
 #include "OSMPDummySensor.h"
 
@@ -49,13 +55,13 @@
 #include <string>
 #include <algorithm>
 #include <cstdint>
-#include <cmath>
 #include <chrono>
-#include <ctime>
-#include <iomanip>
-#include <sstream>  //included for windows compatibility
-#define M_PI   3.14159265358979323846264338327950288
 
+#ifdef _WIN32
+#include <math.h>
+#else
+#include <cmath>
+#endif
 
 using namespace std;
 
@@ -64,16 +70,17 @@ ofstream COSMPDummySensor::private_log_file;
 #endif
 
 #ifdef _WIN32
-std::string fileName = "C:/tmp/OSMPDummySensor_Protobuf_timing";
+std::string fileName = "C:/tmp/OSMPDummySensor_flatbuf_timing";
 #else
-std::string fileName = "/tmp/OSMPDummySensor_Protobuf_timing";
+std::string fileName = "/tmp/OSMPDummySensor_flatbuf_timing";
 #endif
 
+
 /*
- * ProtocolBuffer Accessors
+ * Buffer Accessors
  */
 
-void* decode_integer_to_pointer(fmi2Integer hi,fmi2Integer lo)
+void * decode_integer_to_pointer(fmi2Integer hi,fmi2Integer lo)
 {
 #if PTRDIFF_MAX == INT64_MAX
     union addrconv {
@@ -86,6 +93,7 @@ void* decode_integer_to_pointer(fmi2Integer hi,fmi2Integer lo)
     myaddr.base.lo=lo;
     myaddr.base.hi=hi;
     return reinterpret_cast<void*>(myaddr.address);
+
 #elif PTRDIFF_MAX == INT32_MAX
     return reinterpret_cast<void*>(lo);
 #else
@@ -116,23 +124,26 @@ void encode_pointer_to_integer(const void* ptr,fmi2Integer& hi,fmi2Integer& lo)
 
 bool COSMPDummySensor::get_fmi_sensor_view_config(osi3::SensorViewConfiguration& data)
 {
-    if (integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_SIZE_IDX] > 0) {
+    //todo: sensor view config currently not implemented
+    /*if (integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_SIZE_IDX] > 0) {
         void* buffer = decode_integer_to_pointer(integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_BASELO_IDX]);
         normal_log("OSMP","Got %08X %08X, reading from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_BASELO_IDX],buffer);
         data.ParseFromArray(buffer,integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_SIZE_IDX]);
         return true;
     } else {
         return false;
-    }
+    }*/
+    return false;
 }
 
 void COSMPDummySensor::set_fmi_sensor_view_config_request(const osi3::SensorViewConfiguration& data)
 {
-    data.SerializeToString(currentConfigRequestBuffer);
+    //todo: sensor view config currently not implemented
+    /*data.SerializeToString(currentConfigRequestBuffer);
     encode_pointer_to_integer(currentConfigRequestBuffer->data(),integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX]);
     integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_SIZE_IDX]=(fmi2Integer)currentConfigRequestBuffer->length();
     normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX],currentConfigRequestBuffer->data());
-    swap(currentConfigRequestBuffer,lastConfigRequestBuffer);
+    swap(currentConfigRequestBuffer,lastConfigRequestBuffer);*/
 }
 
 void COSMPDummySensor::reset_fmi_sensor_view_config_request()
@@ -142,25 +153,37 @@ void COSMPDummySensor::reset_fmi_sensor_view_config_request()
     integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX]=0;
 }
 
-bool COSMPDummySensor::get_fmi_sensor_view_in(osi3::SensorView& data)
+const osi3::SensorView* COSMPDummySensor::get_fmi_sensor_view_in()
 {
     if (integer_vars[FMI_INTEGER_SENSORVIEW_IN_SIZE_IDX] > 0) {
         void* buffer = decode_integer_to_pointer(integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASELO_IDX]);
         normal_log("OSMP","Got %08X %08X, reading from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASELO_IDX],buffer);
         std::printf("Got %08X %08X, reading from %p ...\n",integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASELO_IDX],buffer);
-        data.ParseFromArray(buffer,integer_vars[FMI_INTEGER_SENSORVIEW_IN_SIZE_IDX]);
-        return true;
+        //data.ParseFromArray(buffer,integer_vars[FMI_INTEGER_SENSORVIEW_IN_SIZE_IDX]);
+
+        //Experimental: Read from file
+        /*std::ifstream infile;
+        infile.open("/tmp/data.bin", std::ios::binary | std::ios::in);
+        infile.seekg(0, std::ios::end);
+        int length = infile.tellg();
+        infile.seekg(0, std::ios::beg);
+        char* data = new char[length];
+        infile.read(data, length);
+        infile.close();*/
+
+        auto sensor_view_in = flatbuffers::GetRoot<osi3::SensorView>(buffer);
+        return sensor_view_in;
     } else {
-        return false;
+        return nullptr;
     }
 }
 
-void COSMPDummySensor::set_fmi_sensor_data_out(const osi3::SensorData& data)
+void COSMPDummySensor::set_fmi_sensor_data_out()
 {
-    data.SerializeToString(currentOutputBuffer);
-    encode_pointer_to_integer(currentOutputBuffer->data(),integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX]);
-    integer_vars[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX]=(fmi2Integer)currentOutputBuffer->length();
-    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX],currentOutputBuffer->data());
+    encode_pointer_to_integer(currentOutputBuffer.data(),integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX]);
+    integer_vars[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX]=(fmi2Integer)currentOutputBuffer.length();
+    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX],currentOutputBuffer.data());
+    std::printf("Providing %08X %08X, writing from %p ...\n",integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX],currentOutputBuffer.data());
     swap(currentOutputBuffer,lastOutputBuffer);
 }
 
@@ -173,12 +196,13 @@ void COSMPDummySensor::reset_fmi_sensor_data_out()
 
 void COSMPDummySensor::refresh_fmi_sensor_view_config_request()
 {
-    osi3::SensorViewConfiguration config;
+    //todo: sensor view config currently not implemented
+    /*osi3::SensorViewConfiguration config;
     if (get_fmi_sensor_view_config(config))
         set_fmi_sensor_view_config_request(config);
     else {
         config.Clear();
-        config.mutable_version()->CopyFrom(osi3::InterfaceVersion::descriptor()->file()->options().GetExtension(osi3::current_interface_version));
+        config.mutable_version()->CopyFrom(osi3::InterfaceVersion::descriptor()->file()->options()->)GetExtension(osi3::current_interface_version));
         config.set_field_of_view_horizontal(3.14);
         config.set_field_of_view_vertical(3.14);
         config.set_range(fmi_nominal_range()*1.1);
@@ -189,7 +213,7 @@ void COSMPDummySensor::refresh_fmi_sensor_view_config_request()
         generic->set_field_of_view_horizontal(3.14);
         generic->set_field_of_view_vertical(3.14);
         set_fmi_sensor_view_config_request(config);
-    }
+    }*/
 }
 
 /*
@@ -238,15 +262,15 @@ fmi2Status COSMPDummySensor::doExitInitializationMode()
 {
     DEBUGBREAK();
 
-    osi3::SensorViewConfiguration config;
+    /*osi3::SensorViewConfiguration config;
     if (!get_fmi_sensor_view_config(config))
         normal_log("OSI","Received no valid SensorViewConfiguration from Simulation Environment, assuming everything checks out.");
     else {
-        normal_log("OSI","Received SensorViewConfiguration for Sensor Id %llu",config.sensor_id().value());
+        normal_log("OSI","Received SensorViewConfiguration for Sensor Id %llu",config.sensor_id()->)value());
         normal_log("OSI","SVC Ground Truth FoV Horizontal %f, FoV Vertical %f, Range %f",config.field_of_view_horizontal(),config.field_of_view_vertical(),config.range());
-        normal_log("OSI","SVC Mounting Position: (%f, %f, %f)",config.mounting_position().position().x(),config.mounting_position().position().y(),config.mounting_position().position().z());
-        normal_log("OSI","SVC Mounting Orientation: (%f, %f, %f)",config.mounting_position().orientation().roll(),config.mounting_position().orientation().pitch(),config.mounting_position().orientation().yaw());
-    }
+        normal_log("OSI","SVC Mounting Position: (%f, %f, %f)",config.mounting_position()->)position()->)x(),config.mounting_position()->)position()->)y(),config.mounting_position()->)position()->)z());
+        normal_log("OSI","SVC Mounting Orientation: (%f, %f, %f)",config.mounting_position()->)orientation()->)roll(),config.mounting_position()->)orientation()->)pitch(),config.mounting_position()->)orientation()->)yaw());
+    }*/
 
     return fmi2OK;
 }
@@ -273,18 +297,18 @@ void rotatePoint(double x, double y, double z,double yaw,double pitch,double rol
 fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint)
 {
     DEBUGBREAK();
-
-    osi3::SensorView currentIn;
-    osi3::SensorData currentOut;
+    flatbuffers::FlatBufferBuilder builder(1024);
     double time = currentCommunicationPoint+communicationStepSize;
-    normal_log("OSI","Calculating Sensor at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
     auto startOSIDeserialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
-    if (get_fmi_sensor_view_in(currentIn)) {
-        auto stopOSIDeserialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
+    normal_log("OSI","Calculating Sensor at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
+    const osi3::SensorView* sensor_view_in = get_fmi_sensor_view_in();
+    auto stopOSIDeserialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
+
+    if (sensor_view_in) {
         //// Lidar Detections
-#ifndef NO_LIDAR_DETECTIONS
-        if (currentIn.lidar_sensor_view_size() > 0) {
-            auto lidar_sensor = currentOut.mutable_feature_data()->add_lidar_sensor();
+#ifndef NO_LIDAR_REFLECTIONS
+        std::vector<flatbuffers::Offset<osi3::LidarDetection>> lidar_detection_vector;
+        if (sensor_view_in->lidar_sensor_view()) {
             double azimuth_fov = 360.0;             // Azimuth angle FoV in °
             int rays_per_beam_horizontal = 6;       // horizontal super-sampling factor
             double beam_step_azimuth = 0.2;         // horizontal step-size per beam in degrees of VLP32 at 600 rpm (10 Hz) with VLP32's fixed firing_cycle of 55.296e^(-6) s
@@ -293,103 +317,154 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
             int rays_per_layer = azimuth_fov/beam_step_azimuth*rays_per_beam_horizontal*0.8;
             double const_distance = 10.0;
             double speed_of_light = 299792458.0;
-            size_t num_reflections = currentIn.lidar_sensor_view(0).reflection_size();
+            size_t num_reflections = sensor_view_in->lidar_sensor_view()->Get(0)->reflection()->size();
             int layer_idx = -1;
-            for (int reflection_idx = 0; reflection_idx < num_reflections; reflection_idx++) {
+            for (size_t reflection_idx = 0; reflection_idx < num_reflections; reflection_idx++) {
                 if ((reflection_idx % rays_per_layer) == 0) layer_idx++;
-                auto current_reflection = currentIn.lidar_sensor_view(0).reflection(reflection_idx);
+                auto current_reflection = sensor_view_in->lidar_sensor_view()->Get(0)->reflection()->Get(reflection_idx);
                 if (reflection_idx % 18 == 0) {     //18 times super-sampling
                     //todo: generate lidar detection
-                    double distance = current_reflection.time_of_flight() * speed_of_light / 2;
+                    double distance = current_reflection->time_of_flight() * speed_of_light / 2;
                     double azimuth_deg = double(reflection_idx % rays_per_layer) * beam_step_azimuth;
                     double elevation_deg = layer_idx * beam_step_elevation - 5;     //start at -5° for simplification
-                    auto current_detection = lidar_sensor->add_detection();
-                    current_detection->mutable_position()->set_distance(distance);
-                    current_detection->mutable_position()->set_azimuth(azimuth_deg*M_PI/180);
-                    current_detection->mutable_position()->set_elevation(elevation_deg*M_PI/180);
+                    auto detection_position = osi3::CreateSpherical3d(builder, distance, azimuth_deg*M_PI/180, elevation_deg*M_PI/180);
+                    osi3::LidarDetectionBuilder lidar_detection_builder(builder);
+                    lidar_detection_builder.add_position(detection_position);
+                    lidar_detection_vector.push_back(lidar_detection_builder.Finish());
                 }
             }
         }
+        auto lidar_detection_vector_flatvector = builder.CreateVector(lidar_detection_vector);
+        auto lidar_sensor_builder = osi3::LidarDetectionDataBuilder(builder);
+        lidar_sensor_builder.add_detection(lidar_detection_vector_flatvector);
+        auto lidar_sensor = lidar_sensor_builder.Finish();
+        std::vector<flatbuffers::Offset<osi3::LidarDetectionData>> lidar_sensor_vector;
+        lidar_sensor_vector.push_back(lidar_sensor);
+        auto lidar_sensor_vector_flatvector = builder.CreateVector(lidar_sensor_vector);
+        auto feature_data_builder = osi3::FeatureDataBuilder(builder);
+        feature_data_builder.add_lidar_sensor(lidar_sensor_vector_flatvector);
+        auto feature_data = feature_data_builder.Finish();
 #endif
         //// Moving Objects
         double ego_x=0, ego_y=0, ego_z=0;
-        osi3::Identifier ego_id = currentIn.global_ground_truth().host_vehicle_id();
-        normal_log("OSI","Looking for EgoVehicle with ID: %llu",ego_id.value());
-        for_each(currentIn.global_ground_truth().moving_object().begin(),currentIn.global_ground_truth().moving_object().end(),
-            [this, ego_id, &ego_x, &ego_y, &ego_z](const osi3::MovingObject& obj) {
-                normal_log("OSI","MovingObject with ID %llu is EgoVehicle: %d",obj.id().value(), obj.id().value() == ego_id.value());
-                if (obj.id().value() == ego_id.value()) {
-                    normal_log("OSI","Found EgoVehicle with ID: %llu",obj.id().value());
-                    ego_x = obj.base().position().x();
-                    ego_y = obj.base().position().y();
-                    ego_z = obj.base().position().z();
-                }
-            });
+        const osi3::Identifier* ego_id = sensor_view_in->global_ground_truth()->host_vehicle_id();
+        normal_log("OSI","Looking for EgoVehicle with ID: %llu",ego_id->value());
+        size_t num_moving_obj = sensor_view_in->global_ground_truth()->moving_object()->size();
+        for (size_t obj_idx = 0; obj_idx < num_moving_obj; obj_idx++) {
+            auto current_obj = sensor_view_in->global_ground_truth()->moving_object()->Get(obj_idx);
+            normal_log("OSI", "MovingObject with ID %llu is EgoVehicle: %d", current_obj->id()->value(), current_obj->id()->value() == ego_id->value());
+            if (current_obj->id()->value() == ego_id->value()) {
+                normal_log("OSI", "Found EgoVehicle with ID: %llu", current_obj->id()->value());
+                ego_x = current_obj->base()->position()->x();
+                ego_y = current_obj->base()->position()->y();
+                ego_z = current_obj->base()->position()->z();
+            }
+        }
         normal_log("OSI","Current Ego Position: %f,%f,%f", ego_x, ego_y, ego_z);
 
-        /* Clear Output */
-        currentOut.Clear();
-        currentOut.mutable_version()->CopyFrom(osi3::InterfaceVersion::descriptor()->file()->options().GetExtension(osi3::current_interface_version));
-        /* Adjust Timestamps and Ids */
-        currentOut.mutable_timestamp()->set_seconds((long long int)floor(time));
-        currentOut.mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
-        /* Copy of SensorView */
-        currentOut.add_sensor_view()->CopyFrom(currentIn);
-
-        int i=0;
+        std::vector<flatbuffers::Offset<osi3::DetectedMovingObject>> detected_moving_object_vector;
+        int moving_obj_counter=0;
         double actual_range = fmi_nominal_range()*1.1;
-        for_each(currentIn.global_ground_truth().moving_object().begin(),currentIn.global_ground_truth().moving_object().end(),
-            [this,&i,&currentIn,&currentOut,ego_id,ego_x,ego_y,ego_z,actual_range](const osi3::MovingObject& veh) {
-                if (veh.id().value() != ego_id.value()) {
-                    // NOTE: We currently do not take sensor mounting position into account,
-                    // i.e. sensor-relative coordinates are relative to center of bounding box
-                    // of ego vehicle currently.
-                    double trans_x = veh.base().position().x()-ego_x;
-                    double trans_y = veh.base().position().y()-ego_y;
-                    double trans_z = veh.base().position().z()-ego_z;
-                    double rel_x,rel_y,rel_z;
-                    rotatePoint(trans_x,trans_y,trans_z,veh.base().orientation().yaw(),veh.base().orientation().pitch(),veh.base().orientation().roll(),rel_x,rel_y,rel_z);
-                    double distance = sqrt(rel_x*rel_x + rel_y*rel_y + rel_z*rel_z);
-                    if ((distance <= actual_range) && (rel_x/distance > 0.866025)) {
-                        osi3::DetectedMovingObject *obj = currentOut.mutable_moving_object()->Add();
-                        obj->mutable_header()->add_ground_truth_id()->CopyFrom(veh.id());
-                        obj->mutable_header()->mutable_tracking_id()->set_value(i);
-                        obj->mutable_header()->set_existence_probability(cos((2.0*distance-actual_range)/actual_range));
-                        obj->mutable_header()->set_measurement_state(osi3::DetectedItemHeader_MeasurementState_MEASUREMENT_STATE_MEASURED);
-                        obj->mutable_header()->add_sensor_id()->CopyFrom(currentIn.sensor_id());
-                        obj->mutable_base()->mutable_position()->set_x(rel_x);
-                        obj->mutable_base()->mutable_position()->set_y(rel_y);
-                        obj->mutable_base()->mutable_position()->set_z(rel_z);
-                        obj->mutable_base()->mutable_dimension()->set_length(veh.base().dimension().length());
-                        obj->mutable_base()->mutable_dimension()->set_width(veh.base().dimension().width());
-                        obj->mutable_base()->mutable_dimension()->set_height(veh.base().dimension().height());
-                        
-                        osi3::DetectedMovingObject::CandidateMovingObject* candidate = obj->add_candidate();
-                        candidate->set_type(veh.type());
-                        candidate->mutable_vehicle_classification()->CopyFrom(veh.vehicle_classification());
-                        candidate->set_probability(1);
-                        
-                        normal_log("OSI","Output Vehicle %d[%llu] Probability %f Relative Position: %f,%f,%f (%f,%f,%f)",i,veh.id().value(),obj->header().existence_probability(),rel_x,rel_y,rel_z,obj->base().position().x(),obj->base().position().y(),obj->base().position().z());
-                        i++;
-                    } else {
-                        normal_log("OSI","Ignoring Vehicle %d[%llu] Outside Sensor Scope Relative Position: %f,%f,%f (%f,%f,%f)",i,veh.id().value(),veh.base().position().x()-ego_x,veh.base().position().y()-ego_y,veh.base().position().z()-ego_z,veh.base().position().x(),veh.base().position().y(),veh.base().position().z());
-                    }
-                }
-                else
-                {
-                    normal_log("OSI","Ignoring EGO Vehicle %d[%llu] Relative Position: %f,%f,%f (%f,%f,%f)",i,veh.id().value(),veh.base().position().x()-ego_x,veh.base().position().y()-ego_y,veh.base().position().z()-ego_z,veh.base().position().x(),veh.base().position().y(),veh.base().position().z());
-                }
-            });
-        normal_log("OSI","Mapped %d vehicles to output", i);
 
-        /* Serialize */
+        for (size_t obj_idx = 0; obj_idx < num_moving_obj; obj_idx++) {
+            auto current_obj = sensor_view_in->global_ground_truth()->moving_object()->Get(obj_idx);
+            if (current_obj->id()->value() != ego_id->value()) {
+                // NOTE: We currently do not take sensor mounting position into account,
+                // i.e. sensor-relative coordinates are relative to center of bounding box
+                // of ego vehicle currently.
+                double trans_x = current_obj->base()->position()->x() - ego_x;
+                double trans_y = current_obj->base()->position()->y() - ego_y;
+                double trans_z = current_obj->base()->position()->z() - ego_z;
+                double rel_x,rel_y,rel_z;
+                rotatePoint(trans_x, trans_y, trans_z, current_obj->base()->orientation()->yaw(), current_obj->base()->orientation()->pitch(), current_obj->base()->orientation()->roll(), rel_x, rel_y, rel_z);
+                double distance = sqrt(rel_x*rel_x + rel_y*rel_y + rel_z*rel_z);
+                if ((distance <= actual_range) && (rel_x/distance > 0.866025)) {
+                    std::vector<flatbuffers::Offset<osi3::Identifier>> obj_gt_id;
+                    obj_gt_id.push_back(osi3::CreateIdentifier(builder, current_obj->id()->value()));
+                    auto obj_gt_id_flatvector = builder.CreateVector(obj_gt_id);
+                    auto obj_tracking_id = osi3::CreateIdentifier(builder, moving_obj_counter);
+                    std::vector<flatbuffers::Offset<osi3::Identifier>> sensor_id;
+                    sensor_id.push_back(osi3::CreateIdentifier(builder, sensor_view_in->sensor_id()->value()));
+                    auto sensor_id_flatvector = builder.CreateVector(sensor_id);
+                    osi3::DetectedItemHeaderBuilder detected_item_header_builder(builder);
+                    detected_item_header_builder.add_ground_truth_id(obj_gt_id_flatvector);
+                    detected_item_header_builder.add_tracking_id(obj_tracking_id);
+                    detected_item_header_builder.add_existence_probability(cos((2.0*distance-actual_range)/actual_range));
+                    detected_item_header_builder.add_measurement_state(osi3::DetectedItemHeader_::MeasurementState::MEASUREMENT_STATE_MEASURED);
+                    detected_item_header_builder.add_sensor_id(sensor_id_flatvector);
+                    auto obj_header = detected_item_header_builder.Finish();
+
+
+                    auto obj_position = osi3::CreateVector3d(builder, rel_x, rel_y, rel_z);
+                    auto obj_dimension = osi3::CreateDimension3d(builder, current_obj->base()->dimension()->length(), current_obj->base()->dimension()->width(), current_obj->base()->dimension()->height());
+                    osi3::BaseMovingBuilder base_moving_builder(builder);
+                    base_moving_builder.add_position(obj_position);
+                    base_moving_builder.add_dimension(obj_dimension);
+                    auto base_moving = base_moving_builder.Finish();
+
+                    std::vector<flatbuffers::Offset<osi3::DetectedMovingObject_::CandidateMovingObject>> candidate_vector;
+                    osi3::DetectedMovingObject_::CandidateMovingObjectBuilder candidate_builder(builder);
+                    //candidate_builder.add_type(veh->type());  //todo: vehicle types are wrong in headers due to namespace conflict -> stationary and moving are confused
+                    candidate_builder.add_probability(1);
+                    candidate_vector.push_back(candidate_builder.Finish());
+                    auto candidate_flatvector = builder.CreateVector(candidate_vector);
+
+                    osi3::DetectedMovingObjectBuilder detected_moving_object_builder(builder);
+                    detected_moving_object_builder.add_header(obj_header);
+                    detected_moving_object_builder.add_base(base_moving);
+                    detected_moving_object_builder.add_candidate(candidate_flatvector);
+                    auto detected_moving_object = detected_moving_object_builder.Finish();
+                    detected_moving_object_vector.push_back(detected_moving_object);
+
+                    auto obj = reinterpret_cast<osi3::DetectedMovingObject *>(builder.GetCurrentBufferPointer() + builder.GetSize() - detected_moving_object.o);
+
+                    normal_log("OSI","Output Vehicle %d[%llu] Probability %f Relative Position: %f,%f,%f (%f,%f,%f)",obj_idx,current_obj->id()->value(),obj->header()->existence_probability(),rel_x,rel_y,rel_z,obj->base()->position()->x(),obj->base()->position()->y(),obj->base()->position()->z());
+                    moving_obj_counter++;
+                } else {
+                    normal_log("OSI", "Ignoring Vehicle %d[%llu] Outside Sensor Scope Relative Position: %f,%f,%f (%f,%f,%f)", moving_obj_counter, current_obj->id()->value(), current_obj->base()->position()->x() - ego_x, current_obj->base()->position()->y() - ego_y, current_obj->base()->position()->z() - ego_z, current_obj->base()->position()->x(), current_obj->base()->position()->y(), current_obj->base()->position()->z());
+                }
+            }
+            else
+            {
+                normal_log("OSI", "Ignoring EGO Vehicle %d[%llu] Relative Position: %f,%f,%f (%f,%f,%f)", moving_obj_counter, current_obj->id()->value(), current_obj->base()->position()->x() - ego_x, current_obj->base()->position()->y() - ego_y, current_obj->base()->position()->z() - ego_z, current_obj->base()->position()->x(), current_obj->base()->position()->y(), current_obj->base()->position()->z());
+            }
+        }
+        auto detected_moving_object_flatvector = builder.CreateVector(detected_moving_object_vector);
+
+        //auto interface_version = osi3::CreateInterfaceVersion(builder,sensor_view_in->version()->version_major(), sensor_view_in->version()->version_minor(), sensor_view_in->version()->version_patch());    //todo: not implemented in source
+        auto timestamp = osi3::CreateTimestamp(builder, (int64_t)floor(time), (int)((time - floor(time))*1000000000.0));
+
+        /* Copy SensorView */
+        //currentOut.add_sensor_view()->CopyFrom(sensor_view_in);   //todo: copying a serialized buffer into another buffer is not that easy in Flatbuffers
+
+        osi3::SensorDataBuilder sensor_data_builder(builder);
+        sensor_data_builder.add_timestamp(timestamp);
+        //sensor_data_builder.add_version(interface_version);
+        sensor_data_builder.add_moving_object(detected_moving_object_flatvector);
+#ifndef NO_LIDAR_REFLECTIONS
+        if (sensor_view_in->lidar_sensor_view()) {
+            sensor_data_builder.add_feature_data(feature_data);
+        }
+#endif
+        auto sensor_data = sensor_data_builder.Finish();
+
         auto startOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
-        set_fmi_sensor_data_out(currentOut);
+
+        builder.Finish(sensor_data);
+        auto uint8_buffer = builder.GetBufferPointer();
+        auto size = builder.GetSize();
+        std::string tmp_buffer(reinterpret_cast<char const*>(uint8_buffer), size);
+        currentOutputBuffer = tmp_buffer;
+
+        normal_log("OSI", "Mapped %d vehicles to output", moving_obj_counter);
+
+        set_fmi_sensor_data_out();
         set_fmi_valid(true);
-        set_fmi_count(currentOut.moving_object_size());
+        set_fmi_count(moving_obj_counter);
+
         auto stopOSISerialize = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::system_clock::now().time_since_epoch());
 
-        //Performance logging
+        //// Performance logging
         std::ifstream f(fileName.c_str());
         bool fileExists = f.is_open();
         f.close();
@@ -417,8 +492,8 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
             logFile << "\t\"Data\": [" << std::endl;
             logFile << "\t\t{" << std::endl;
             logFile << "\t\t\t\"Instance\": {" << std::endl;
-            logFile << "\t\t\t\t\"ModelIdentity\": " << "\"OSMPDummySensor Protobuf\"" << std::endl;
-            /*logFile << "\t\t\t\t\"ModelIdentity\": " << "\"OSMPDummySensor Protobuf\"" << "," << std::endl;
+            logFile << "\t\t\t\t\"ModelIdentity\": " << "\"OSMPDummySensor Flatbuf\"" << std::endl;
+            /*logFile << "\t\t\t\t\"ModelIdentity\": " << "\"OSMPDummySensor Flatbuf\"" << "," << std::endl;
             logFile << "\t\t\t\t\"OsiVersion\": {" << std::endl;
             logFile << "\t\t\t\t\t\"version_major\": " << sensor_view_in->version()->version_major() << "," << std::endl;
             logFile << "\t\t\t\t\t\"version_minor\": " << sensor_view_in->version()->version_minor() << "," << std::endl;
@@ -433,10 +508,11 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         if(fileExists) {
             logFile << "," <<  std::endl;
         }
-        size_t sensorDataSize = currentOut.ByteSize();
-        double osiSimTime = (double)currentOut.timestamp().seconds() + (float)currentOut.timestamp().nanos() * 0.000000001;
-        logFile << "\t\t\t\t[" << "2" << ", " << std::setprecision(16) << (double)startOSIDeserialize.count() << ", " << osiSimTime << ", " << "0" << ", " << "2" << ", " << 999 << "]," << std::endl;   //todo: sensor view size
-        logFile << "\t\t\t\t[" << "3" << ", " << std::setprecision(16) << (double)stopOSIDeserialize.count() << ", " <<  osiSimTime << ", " << "0" << ", " << "2" << ", " << 999 << "]," << std::endl;
+        size_t sensorDataSize = builder.GetSize();
+        double osiSimTime = (double)sensor_view_in->global_ground_truth()->timestamp()->seconds() + (double)sensor_view_in->global_ground_truth()->timestamp()->nanos() * 0.000000001;
+
+        logFile << "\t\t\t\t[" << "2" << ", " << std::setprecision(16) << (double)startOSIDeserialize.count() << ", " << osiSimTime << ", " << "0" << ", " << "2" << ", " << sizeof(*sensor_view_in) << "]," << std::endl;
+        logFile << "\t\t\t\t[" << "3" << ", " << std::setprecision(16) << (double)stopOSIDeserialize.count() << ", " <<  osiSimTime << ", " << "0" << ", " << "2" << ", " << sizeof(*sensor_view_in) << "]," << std::endl;
         logFile << "\t\t\t\t[" << "0" << ", " << std::setprecision(16) << (double)startOSISerialize.count() << ", " << osiSimTime << ", " << "1" <<  ", " << "5" << ", " << sensorDataSize << "]," <<  std::endl;
         logFile << "\t\t\t\t[" << "1" << ", " << std::setprecision(16) << (double)stopOSISerialize.count() << ", " <<  osiSimTime << ", " << "1" <<  ", " << "5" << ", " << sensorDataSize << "]";
         logFile.close();
@@ -477,10 +553,10 @@ COSMPDummySensor::COSMPDummySensor(fmi2String theinstanceName, fmi2Type thefmuTy
     loggingOn(!!theloggingOn),
     simulation_started(false)
 {
-    currentOutputBuffer=new string();
+    /*currentOutputBuffer=new string();
     lastOutputBuffer=new string();
     currentConfigRequestBuffer=new string();
-    lastConfigRequestBuffer=new string();
+    lastConfigRequestBuffer=new string();*/
     loggingCategories.clear();
     loggingCategories.insert("FMI");
     loggingCategories.insert("OSMP");
@@ -489,10 +565,10 @@ COSMPDummySensor::COSMPDummySensor(fmi2String theinstanceName, fmi2Type thefmuTy
 
 COSMPDummySensor::~COSMPDummySensor()
 {
-    delete currentOutputBuffer;
+    /*delete currentOutputBuffer;
     delete lastOutputBuffer;
     delete currentConfigRequestBuffer;
-    delete lastConfigRequestBuffer;
+    delete lastConfigRequestBuffer;*/
 }
 
 fmi2Status COSMPDummySensor::SetDebugLogging(fmi2Boolean theloggingOn, size_t nCategories, const fmi2String categories[])
