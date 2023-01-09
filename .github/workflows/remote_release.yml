@@ -16,6 +16,8 @@ jobs:
       - name: Update submodule and push with tag
         run: |
           cd repo
+          git config user.email "you@example.com"
+          git config user.name "GitHub Bot"
           git submodule update --recursive --remote
           git add .
           git commit -m "git submodule updated"
