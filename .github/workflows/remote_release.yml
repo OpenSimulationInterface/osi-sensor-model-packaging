@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0 # otherwise, there would be errors pushing refs to the destination repository.
         
-      - name: Update submodule and push with tag
+      - name: Update submodule
         run: |
           git submodule init
           git submodule update --recursive --remote
@@ -26,8 +26,11 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add .
           git commit -m "git submodule updated"
-          git tag ${{ github.event.client_payload.tag }}
-          
+        continue-on-error: true
+        
+      - name: Create tag
+        run: git tag ${{ github.event.client_payload.tag }}
+        
       - name: GitHub Push
         uses: ad-m/github-push-action@v0.6.0
         with:
