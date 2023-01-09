@@ -12,17 +12,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          path: repo
+          fetch-depth: 0 # otherwise, there would be errors pushing refs to the destination repository.
+        
       - name: Update submodule and push with tag
         run: |
-          cd repo
-          git config user.email "you@example.com"
-          git config user.name "GitHub Bot"
           git submodule init
           git submodule update --recursive --remote
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           git add .
           git commit -m "git submodule updated"
           git tag ${{ github.event.client_payload.tag }}
-          git push --atomic origin master ${{ github.event.client_payload.tag }}
-      
-    
+          
+      - name: GitHub Push
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+          # Token for the repo. Can be passed in using $\{{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Determines if --tags is used
+          tags: true
+
