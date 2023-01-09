@@ -3,6 +3,10 @@ name: Remote Tagging
 on:
   repository_dispatch:
     types: [update-tag]
+
+permissions:
+  contents: write
+  repository-projects: write
     
 jobs:
   submodule:
