@@ -16,6 +16,7 @@ jobs:
           fetch-depth: 0 # test if depth in fetch history is required
       - name: Update submodule and push with tag
         run: |
+          ls
           git submodule update --recursive --remote
           git add .
           git commit -m "git submodule updated"
