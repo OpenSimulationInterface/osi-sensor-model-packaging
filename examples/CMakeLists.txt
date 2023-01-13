@@ -16,7 +16,18 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-set(OSMPVERSION "1.3.0" CACHE STRING "OSMP Version String")
+file(READ "VERSION" ver)
+
+string(REGEX MATCH "VERSION_MAJOR ([0-9]*)" _ ${ver})
+set(OSMP_VERSION_MAJOR ${CMAKE_MATCH_1})
+
+string(REGEX MATCH "VERSION_MINOR ([0-9]*)" _ ${ver})
+set(OSMP_VERSION_MINOR ${CMAKE_MATCH_1})
+
+string(REGEX MATCH "VERSION_PATCH ([0-9]*)" _ ${ver})
+set(OSMP_VERSION_PATCH ${CMAKE_MATCH_1})
+
+set(OSMPVERSION "${OSMP_VERSION_MAJOR}.${OSMP_VERSION_MINOR}.${OSMP_VERSION_PATCH}" CACHE STRING "OSMP Version String")
 
 add_subdirectory( open-simulation-interface )
 
