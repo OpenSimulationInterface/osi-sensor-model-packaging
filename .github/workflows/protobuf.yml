@@ -72,7 +72,7 @@ jobs:
     name: Update OSI release
     runs-on: ubuntu-22.04
     needs: [build-osmp-examples]
-    if: ${{ github.even_name == 'repository_dispatch' }}
+    if: ${{ github.event.client_payload }}
     steps:
       - name: Collect previous artifacts
         uses: actions/download-artifact@v3.0.2
