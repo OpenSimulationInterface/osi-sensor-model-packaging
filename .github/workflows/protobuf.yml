@@ -83,7 +83,7 @@ jobs:
         uses: TheDoctor0/zip-release@0.6.2
         with: 
           filename: Examples.zip
-          directory: examples/build
+          path: examples/build
       - name: Upload artifacts to release
         uses: svenstaro/upload-release-action@v2
         with:
