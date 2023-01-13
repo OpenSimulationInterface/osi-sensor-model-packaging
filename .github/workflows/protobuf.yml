@@ -71,6 +71,7 @@ jobs:
   update_interface_release:
     name: Update OSI release
     runs-on: ubuntu-22.04
+    needs: [build-osmp-examples]
     if: ${{ github.even_name }} == 'repository_dispatch'
     steps:
       - name: Collect previous artifacts
