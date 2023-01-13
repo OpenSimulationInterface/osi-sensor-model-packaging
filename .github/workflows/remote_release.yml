@@ -28,9 +28,14 @@ jobs:
           git commit -m "git submodule updated"
         continue-on-error: true
         
-      - name: Create tag
+      - name: Create Antora tag
         run: git tag ${{ github.event.client_payload.tag }}
-        
+      
+      - name: Create release tag
+        run: |
+          REPO_TAG="v$(sed -rn 's/VERSION_MAJOR = (.+)/\1/p' VERSION).$(sed -rn 's/VERSION_MINOR = (.+)/\1/p' VERSION).$(sed -rn 's/VERSION_PATCH = (.+)/\1/p' VERSION)"
+          git tag ${REPO_TAG}
+      
       - name: GitHub Push
         uses: ad-m/github-push-action@v0.6.0
         with:
