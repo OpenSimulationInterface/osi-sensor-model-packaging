@@ -33,7 +33,7 @@ jobs:
       
       - name: Create release tag
         run: |
-          REPO_TAG="v$(sed -rn 's/VERSION_MAJOR = (.+)/\1/p' VERSION).$(sed -rn 's/VERSION_MINOR = (.+)/\1/p' VERSION).$(sed -rn 's/VERSION_PATCH = (.+)/\1/p' VERSION)"
+          REPO_TAG="v$(sed -rn 's/VERSION_MAJOR = (.+)/\1/p' VERSION).$(sed -rn 's/VERSION_MINOR = (.+)/\1/p' VERSION).$(sed -rn 's/VERSION_PATCH = (.+)/\1/p' VERSION)${{ github.event.client_payload.suffix }}"
           git tag ${REPO_TAG}
       
       - name: GitHub Push
