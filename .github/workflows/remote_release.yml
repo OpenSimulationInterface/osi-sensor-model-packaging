@@ -29,7 +29,7 @@ jobs:
         continue-on-error: true
         
       - name: Create Antora tag
-        run: git tag ${{ github.event.client_payload.tag }}-antora
+        run: git tag x-antora-${{ github.event.client_payload.tag }}
       
       - name: Create release tag
         run: |
