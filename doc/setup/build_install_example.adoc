@@ -1,0 +1,72 @@
+ifndef::include-only-once[]
+:root-path: ../
+include::{root-path}_config.adoc[]
+endif::[]
+= Building and installing examples
+
+OSMP includes three examples located in `_osmp_/examples`:
+
+`OSMPDummySensor/`::
+Can be used as a simple dummy sensor model, demonstrating the use of OSI for sensor models consuming sensor view data and generating sensor data output.
+
+`OSMPDummySource/`::
+Can be used as a simple source of sensor view data and ground-truth data.
+It can be connected to the input of an `OSMPDummySensor` model, for simple testing and demonstration purposes.
+
+`OSMPCNetworkProxy/`::
+Demonstrates a simple C network proxy that can send and receive OSI data via TCP sockets.
+
+**Prerequisites**
+
+* You have installed _cmake_ version 3.10.2 or higher.
+* You have installed _protobuf_ version 3.0.0 or higher.
+
+**Steps**
+
+. Clone the OSMP repository.
++
+----
+git clone https://github.com/OpenSimulationInterface/osi-sensor-model-packaging.git
+----
++
+. Switch to the OSMP repository.
++
+----
+cd osi-sensor-model-packaging
+----
++
+. Update and initialize the OSI submodule.
++
+----
+git submodule update --init
+----
++
+. Switch to the `examples/` directory.
++
+----
+cd examples
+----
++
+. Create a new directory called `build/`.
++
+----
+mkdir -p build
+----
++
+. Switch to the `build/` directory.
++
+----
+cd build
+----
++
+. Run _cmake_ in the parent directory.
++
+----
+cmake ..
+----
++
+. Run _cmake_ build.
++
+----
+cmake --build .
+----

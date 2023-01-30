@@ -359,7 +359,7 @@ fmi2Status doExitInitializationMode(OSMPCNetworkProxy component)
         return fmi2OK;
 }
 
-fmi2Status doCalc(OSMPCNetworkProxy component, fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component)
+fmi2Status doCalc(OSMPCNetworkProxy component, fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint)
 {
     void* buffer=NULL;
     int buffersize=0;

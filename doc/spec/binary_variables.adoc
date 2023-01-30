@@ -1,0 +1,73 @@
+ifndef::include-only-once[]
+:root-path: ../
+include::{root-path}_config.adoc[]
+endif::[]
+= Binary variables
+
+FMI 2.0 cite:[fmi2.0] does not directly support the efficient exchange of arbitrary binary data between FMUs.
+OSMP therefore introduces the concept of notional binary variables that are mapped to actual integer variables for use with FMI 2.0 cite:[fmi2.0].
+Future FMI versions will directly support binary variables compatible with this concept.
+
+A notional binary variable named `<prefix>` is defined using the following conventions:
+
+The name of the notional binary variable given by `<prefix>` shall be a valid structured name according to FMI 2.0 cite:[fmi2.0].
+
+The FMU shall not contain any other variable that is named `<prefix>`.
+This restriction ensures that there is no conflict between notional binary variables and actual variables.
+
+For each notional binary variable, three actual FMU integer variables shall be defined:
+
+`<prefix>.base.lo`::
+Lower, meaning the least significant, 32-bit address part of the binary data buffer to be passed into or out of the model, cast into a signed 32-bit integer without changing the bit values.
+`<prefix>.base.hi`::
+Higher, meaning the most significant, 32-bit address part of the binary data buffer to be passed into or out of the model, cast into a signed 32-bit integer without changing the bit values.
+Note that this variable is only used for 64-bit platforms.
+For 32-bit platforms, it shall still be present but will always be 0 to support FMUs with 32-bit and 64-bit implementations.
+`<prefix>.size`::
+Size of the binary data buffer to be passed into or out of the model as a signed 32-bit integer.
+This restricts the maximum size of binary data buffers being passed around to a size less than 2 GB.
+
+The three actual variables shall have matching causality and variability, which will be the causality and variability of the notional binary variable.
+
+The variables shall have a start value of 0, indicating that no valid binary data buffer is available.
+The variables may have a different or no start value if the combination of causality and variability precludes this, for example, for `@variability = fixed` or `@variability = tunable` and `@causality = calculatedParameter`.
+
+Model FMUs shall interpret values of 0 for the merged base address or the size to indicate that no valid binary data buffer is available.
+Models FMUs shall handle this case safely.
+
+The three actual variables shall contain an annotation of the following form in the `<Annotations>` child element of their `<ScalarVariable>` element of the `modelDescription.xml`:
+
+[source,xml]
+----
+<Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="<prefix>" role="<role>" mime-type="<mime-type>"/></Tool>
+----
+
+`<prefix>` is the prefix as defined above, and `@role` is either `base.lo`, `base.hi`, or `size`, depending on the variable.
+
+It is an error if there is not exactly one variable of each role for the same name.
+
+The MIME type given in `@mime-type` shall be a valid MIME type specification.
+
+It is an error if the MIME types specified in the annotations for one notional binary variable differ.
+
+In the case of OSI-specified data, the MIME type shall have the following form to indicate that the binary content is conformant to the given OSI version and contains a message of the given type:
+
+[source,xml]
+----
+application/x-open-simulation-interface; type=<type>; version=x.y.z
+----
+
+`<type>` shall be the name of an OSI top-level message, excluding the `osi3::` prefix.
+
+The version parameter of the MIME type `application/x-open-simulation-interface` will default to the version specified in the `@osi-version` attribute as part of the top-level `<osmp:osmp>` annotation.
+It is an error if a version number is specified neither as part of the MIME type nor using the `@osi-version` attribute.
+
+The guaranteed lifetime of the binary data buffer pointer transported through the actual variables is defined for each kind of variable, as specified in the following sections.
+
+Generally the lifetime for inputs is from the time they are set to the time the corresponding co-simulation step calculation finishes.
+For outputs the lifetime is extended from the point the output is provided at the end of a co-simulation step until the end of the next co-simulation step.
+
+This convention allows the use of FMUs in simulation engines that have no special support for the protocol buffer pointers:
+The simulation engine can rely on the provided buffer to remain valid from the moment it is passed out of a model until the end of the next co-simulation calculation cycle.
+Thus, the simulation engine does not need to copy the contents in that case, corresponding to zero-copy output for the simulation engine at the cost of double buffering for the model providing the output data.
+It is possible to daisy-chain FMUs with protocol buffer inputs and outputs in a normal simulation engine supporting FMI, and get valid results.

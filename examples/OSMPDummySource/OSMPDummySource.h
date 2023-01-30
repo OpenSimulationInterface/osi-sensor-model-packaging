@@ -8,6 +8,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include "OSMPDummySourceConfig.h"
+
 using namespace std;
 
 #ifndef FMU_SHARED_OBJECT
@@ -190,8 +192,8 @@ protected:
     fmi2Integer integer_vars[FMI_INTEGER_VARS];
     fmi2Real real_vars[FMI_REAL_VARS];
     string string_vars[FMI_STRING_VARS];
-    string currentBuffer;
-    string lastBuffer;
+    string* currentBuffer;
+    string* lastBuffer;
 
     /* Simple Accessors */
     fmi2Boolean fmi_valid() { return boolean_vars[FMI_BOOLEAN_VALID_IDX]; }

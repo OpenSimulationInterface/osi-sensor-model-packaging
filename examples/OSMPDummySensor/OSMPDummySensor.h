@@ -8,6 +8,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include "OSMPDummySensorConfig.h"
+
 using namespace std;
 
 #ifndef FMU_SHARED_OBJECT
@@ -202,10 +204,10 @@ protected:
     fmi2Real real_vars[FMI_REAL_VARS];
     string string_vars[FMI_STRING_VARS];
     bool simulation_started;
-    string currentOutputBuffer;
-    string lastOutputBuffer;
-    string currentConfigRequestBuffer;
-    string lastConfigRequestBuffer;
+    string* currentOutputBuffer;
+    string* lastOutputBuffer;
+    string* currentConfigRequestBuffer;
+    string* lastConfigRequestBuffer;
 
     /* Simple Accessors */
     fmi2Boolean fmi_valid() { return boolean_vars[FMI_BOOLEAN_VALID_IDX]; }

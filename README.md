@@ -1,11 +1,13 @@
 # OSI Sensor Model Packaging
 
-[![Build Status](https://travis-ci.com/OpenSimulationInterface/osi-sensor-model-packaging.svg?branch=master)](https://travis-ci.com/OpenSimulationInterface/osi-sensor-model-packaging)
+[![ProtoBuf CI Builds](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging/actions/workflows/protobuf.yml/badge.svg)](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging/actions/workflows/protobuf.yml)
 
 OSI Sensor Model Packaging specifies ways in which models (like e.g. environmental effect models, sensor models and logical models) using the [Open Simulation Interface (OSI)][] are to be packaged for their use in simulation environments using FMI 2.0.
-The specification can be found in the [doc/specification.rst](doc/specification.rst) document in this repository.
+The specification can be found in the [doc/osi-sensor-model-packaging_spec.adoc](doc/osi-sensor-model-packaging_spec.adoc) document in this repository.
 
-For more detailed information see the [official documentation](https://opensimulationinterface.github.io/osi-documentation/osi-sensor-model-packaging/README.html).
+For more detailed information see the [official documentation](https://opensimulationinterface.github.io/osi-documentation/#_osi_sensor_model_packaging).
+
+<!-- TODO: Update link with new Antora hosting -->
 
 [Open Simulation Interface (OSI)]: https://github.com/OpenSimulationInterface/open-simulation-interface
 
@@ -30,7 +32,7 @@ Install `protobuf` 3.0.0:
 $ sudo apt-get install libprotobuf-dev protobuf-compiler
 ```
 
-##### Build and install example
+##### Build examples
 ```bash
 $ git clone https://github.com/OpenSimulationInterface/osi-sensor-model-packaging.git
 $ cd osi-sensor-model-packaging
@@ -39,6 +41,5 @@ $ cd examples
 $ mkdir -p build
 $ cd build
 $ cmake ..
-$ make
-$ sudo make install
+$ cmake --build .
 ```

@@ -16,7 +16,15 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
+set(OSMPVERSION "1.3.0" CACHE STRING "OSMP Version String")
+
 add_subdirectory( open-simulation-interface )
+
+get_directory_property(OSI_VERSION_MAJOR DIRECTORY open-simulation-interface DEFINITION VERSION_MAJOR)
+get_directory_property(OSI_VERSION_MINOR DIRECTORY open-simulation-interface DEFINITION VERSION_MINOR)
+get_directory_property(OSI_VERSION_PATCH DIRECTORY open-simulation-interface DEFINITION VERSION_PATCH)
+set(OSIVERSION "${OSI_VERSION_MAJOR}.${OSI_VERSION_MINOR}.${OSI_VERSION_PATCH}")
+
 include_directories( includes )
 add_subdirectory( OSMPDummySensor )
 add_subdirectory( OSMPDummySource )

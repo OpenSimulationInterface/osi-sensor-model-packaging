@@ -1,0 +1,62 @@
+name: ProtoBuf CI Builds
+
+on:
+  push:
+  pull_request:
+    branches: [ master ]
+
+# this is a test
+
+jobs:
+  build-osmp-examples:
+    name: Build OSMP examples
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout OSI
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.7'
+
+    # cache dependencies
+    - name: Cache Dependencies
+      id: cache-depends
+      uses: actions/cache@v3
+      with:
+        path: protobuf-3.15.8
+        key: ${{ runner.os }}-v2-depends
+
+    # Download and build protobuf
+    - name: Download ProtoBuf
+      if: steps.cache-depends.outputs.cache-hit != 'true'
+      run: curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.15.8/protobuf-all-3.15.8.tar.gz && tar xzvf protobuf-all-3.15.8.tar.gz
+
+    - name: Build ProtoBuf
+      if: steps.cache-depends.outputs.cache-hit != 'true'
+      working-directory: protobuf-3.15.8
+      run: ./configure DIST_LANG=cpp --prefix=/usr && make
+
+    - name: Install ProtoBuf
+      working-directory: protobuf-3.15.8
+      run: sudo make install && sudo ldconfig
+
+    # prepare build
+    - name: Prepare C++ Build
+      working-directory: examples
+      run: mkdir build
+
+    - name: cmake prepare
+      working-directory: examples/build
+      run: cmake -D CMAKE_PREFIX_PATH:PATH=${DEPS_DIR}/protobuf/install ..
+
+    - name: Build C++
+      working-directory: examples/build
+      run: cmake --build .
+
+
