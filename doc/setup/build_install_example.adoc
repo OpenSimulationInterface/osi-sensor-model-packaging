@@ -2,7 +2,6 @@ ifndef::include-only-once[]
 :root-path: ../
 include::{root-path}_config.adoc[]
 endif::[]
-
 = Building and installing examples
 
 OSMP includes three examples located in `_osmp_/examples`:
