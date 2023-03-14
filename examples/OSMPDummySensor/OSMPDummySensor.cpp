@@ -236,6 +236,16 @@ fmi2Status COSMPDummySensor::doExitInitializationMode()
     return fmi2OK;
 }
 
+void transposeRotationMatrix(double matrix_in[3][3], double matrix_trans[3][3]) {
+  for(int i=0; i < 3; i++)
+  {
+    for (int j = 0; j < 3; j++)
+    {
+      matrix_trans[j][i] = matrix_in[i][j];
+    }
+  }
+}
+
 void rotatePoint(double x, double y, double z,double yaw,double pitch,double roll,double &rx,double &ry,double &rz)
 {
     double matrix[3][3];
@@ -250,9 +260,12 @@ void rotatePoint(double x, double y, double z,double yaw,double pitch,double rol
     matrix[1][0] = sin_yaw*cos_pitch;  matrix[1][1]=sin_yaw*sin_pitch*sin_roll + cos_yaw*cos_roll; matrix[1][2]=sin_yaw*sin_pitch*cos_roll - cos_yaw*sin_roll;
     matrix[2][0] = -sin_pitch;         matrix[2][1]=cos_pitch*sin_roll;                            matrix[2][2]=cos_pitch*cos_roll;
 
-    rx = matrix[0][0] * x + matrix[0][1] * y + matrix[0][2] * z;
-    ry = matrix[1][0] * x + matrix[1][1] * y + matrix[1][2] * z;
-    rz = matrix[2][0] * x + matrix[2][1] * y + matrix[2][2] * z;
+    double matrix_trans[3][3];
+    transposeRotationMatrix(matrix, matrix_trans);
+
+    rx = matrix_trans[0][0] * x + matrix_trans[0][1] * y + matrix_trans[0][2] * z;
+    ry = matrix_trans[1][0] * x + matrix_trans[1][1] * y + matrix_trans[1][2] * z;
+    rz = matrix_trans[2][0] * x + matrix_trans[2][1] * y + matrix_trans[2][2] * z;
 }
 
 fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint)
@@ -264,17 +277,20 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     double time = currentCommunicationPoint+communicationStepSize;
     normal_log("OSI","Calculating Sensor at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
     if (get_fmi_sensor_view_in(currentIn)) {
-        double ego_x=0, ego_y=0, ego_z=0;
+        double ego_x=0, ego_y=0, ego_z=0, ego_yaw=0, ego_pitch=0, ego_roll=0;
         osi3::Identifier ego_id = currentIn.global_ground_truth().host_vehicle_id();
         normal_log("OSI","Looking for EgoVehicle with ID: %llu",ego_id.value());
         for_each(currentIn.global_ground_truth().moving_object().begin(),currentIn.global_ground_truth().moving_object().end(),
-            [this, ego_id, &ego_x, &ego_y, &ego_z](const osi3::MovingObject& obj) {
+            [this, ego_id, &ego_x, &ego_y, &ego_z, &ego_yaw, &ego_pitch, &ego_roll](const osi3::MovingObject& obj) {
                 normal_log("OSI","MovingObject with ID %llu is EgoVehicle: %d",obj.id().value(), obj.id().value() == ego_id.value());
                 if (obj.id().value() == ego_id.value()) {
                     normal_log("OSI","Found EgoVehicle with ID: %llu",obj.id().value());
                     ego_x = obj.base().position().x();
                     ego_y = obj.base().position().y();
                     ego_z = obj.base().position().z();
+                    ego_yaw = obj.base().orientation().yaw();
+                    ego_pitch = obj.base().orientation().pitch();
+                    ego_roll = obj.base().orientation().roll();
                 }
             });
         normal_log("OSI","Current Ego Position: %f,%f,%f", ego_x, ego_y, ego_z);
@@ -291,7 +307,7 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         int i=0;
         double actual_range = fmi_nominal_range()*1.1;
         for_each(currentIn.global_ground_truth().moving_object().begin(),currentIn.global_ground_truth().moving_object().end(),
-            [this,&i,&currentIn,&currentOut,ego_id,ego_x,ego_y,ego_z,actual_range](const osi3::MovingObject& veh) {
+            [this,&i,&currentIn,&currentOut,ego_id,ego_x,ego_y,ego_z,ego_yaw,ego_pitch,ego_roll,actual_range](const osi3::MovingObject& veh) {
                 if (veh.id().value() != ego_id.value()) {
                     // NOTE: We currently do not take sensor mounting position into account,
                     // i.e. sensor-relative coordinates are relative to center of bounding box
@@ -300,7 +316,7 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
                     double trans_y = veh.base().position().y()-ego_y;
                     double trans_z = veh.base().position().z()-ego_z;
                     double rel_x,rel_y,rel_z;
-                    rotatePoint(trans_x,trans_y,trans_z,veh.base().orientation().yaw(),veh.base().orientation().pitch(),veh.base().orientation().roll(),rel_x,rel_y,rel_z);
+                    rotatePoint(trans_x,trans_y,trans_z,ego_yaw,ego_pitch,ego_roll,rel_x,rel_y,rel_z);
                     double distance = sqrt(rel_x*rel_x + rel_y*rel_y + rel_z*rel_z);
                     if ((distance <= actual_range) && (rel_x/distance > 0.866025)) {
                         osi3::DetectedMovingObject *obj = currentOut.mutable_moving_object()->Add();
