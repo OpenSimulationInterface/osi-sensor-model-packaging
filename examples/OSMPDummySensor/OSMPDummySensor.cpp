@@ -246,7 +246,9 @@ void transposeRotationMatrix(double matrix_in[3][3], double matrix_trans[3][3]) 
   }
 }
 
-void rotatePoint(double x, double y, double z,double yaw,double pitch,double roll,double &rx,double &ry,double &rz)
+void rotatePointXYZ(double x, double y, double z,
+    double yaw, double pitch, double roll,
+    double &rx, double &ry, double &rz)
 {
     double matrix[3][3];
     double cos_yaw = cos(yaw);
@@ -256,16 +258,58 @@ void rotatePoint(double x, double y, double z,double yaw,double pitch,double rol
     double sin_pitch = sin(pitch);
     double sin_roll = sin(roll);
 
-    matrix[0][0] = cos_yaw*cos_pitch;  matrix[0][1]=cos_yaw*sin_pitch*sin_roll - sin_yaw*cos_roll; matrix[0][2]=cos_yaw*sin_pitch*cos_roll + sin_yaw*sin_roll;
-    matrix[1][0] = sin_yaw*cos_pitch;  matrix[1][1]=sin_yaw*sin_pitch*sin_roll + cos_yaw*cos_roll; matrix[1][2]=sin_yaw*sin_pitch*cos_roll - cos_yaw*sin_roll;
-    matrix[2][0] = -sin_pitch;         matrix[2][1]=cos_pitch*sin_roll;                            matrix[2][2]=cos_pitch*cos_roll;
+    /* order of rotation: roll (x-axis), pitch (y-axis), yaw (z-axis) */
+    matrix[0][0] = cos_pitch*cos_yaw;                              matrix[0][1] = -cos_pitch*sin_yaw;                             matrix[0][2] = sin_pitch;
+    matrix[1][0] = sin_roll*sin_pitch*cos_yaw + cos_roll*sin_yaw;  matrix[1][1] = -sin_roll*sin_pitch*sin_yaw + cos_roll*cos_yaw; matrix[1][2] = -sin_roll*cos_pitch;
+    matrix[2][0] = -cos_roll*sin_pitch*cos_yaw + sin_roll*sin_yaw; matrix[2][1] = cos_roll*sin_pitch*sin_yaw + sin_roll*cos_yaw;  matrix[2][2] = cos_roll*cos_pitch;
 
-    double matrix_trans[3][3];
-    transposeRotationMatrix(matrix, matrix_trans);
+    rx = matrix[0][0] * x + matrix[0][1] * y + matrix[0][2] * z;
+    ry = matrix[1][0] * x + matrix[1][1] * y + matrix[1][2] * z;
+    rz = matrix[2][0] * x + matrix[2][1] * y + matrix[2][2] * z;
+}
 
-    rx = matrix_trans[0][0] * x + matrix_trans[0][1] * y + matrix_trans[0][2] * z;
-    ry = matrix_trans[1][0] * x + matrix_trans[1][1] * y + matrix_trans[1][2] * z;
-    rz = matrix_trans[2][0] * x + matrix_trans[2][1] * y + matrix_trans[2][2] * z;
+/**
+ * @brief Transform global OSI ground truth coordinate to vehicle coordinate
+ * system (origin of vehicle coordinate system: center rear axle).
+ */
+void transformCoordinateGlobalToVehicle(double &rx, double &ry, double &rz,
+    double ego_x, double ego_y, double ego_z,
+    double ego_yaw, double ego_pitch, double ego_roll,
+    double ego_bbcenter_to_rear_x, double ego_bbcenter_to_rear_y, double ego_bbcenter_to_rear_z)
+{
+    /* subtract global ego vehicle position from global coordinate */
+    rx = rx-ego_x;
+    ry = ry-ego_y;
+    rz = rz-ego_z;
+
+    /* rotate by negative ego vehicle orientation */
+    rotatePointXYZ(rx, ry, rz,
+        -ego_yaw, -ego_pitch, -ego_roll,
+        rx, ry, rz);
+    
+    /* subtract center of rear axle position */
+    rx = rx-ego_bbcenter_to_rear_x;
+    ry = ry-ego_bbcenter_to_rear_y;
+    rz = rz-ego_bbcenter_to_rear_z;
+}
+
+/**
+ * @brief Transform coordinate from vehicle coordinate system to
+ * virtual/physical sensor coordinate system.
+ */
+void transformCoordinateVehicleToSensor(double &rx, double &ry, double &rz,
+    double mounting_position_x, double mounting_position_y, double mounting_position_z,
+    double mounting_position_yaw, double mounting_position_pitch, double mounting_position_roll)
+{
+    /* subtract virtual/physical sensor mounting position */
+    rx = rx-mounting_position_x;
+    ry = ry-mounting_position_y;
+    rz = rz-mounting_position_z;
+
+    /* rotate by negative virtual/physical sensor mounting orientation */
+    rotatePointXYZ(rx, ry, rz,
+        -mounting_position_yaw, -mounting_position_pitch, -mounting_position_roll,
+        rx, ry, rz);
 }
 
 fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint)
@@ -277,11 +321,11 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
     double time = currentCommunicationPoint+communicationStepSize;
     normal_log("OSI","Calculating Sensor at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
     if (get_fmi_sensor_view_in(currentIn)) {
-        double ego_x=0, ego_y=0, ego_z=0, ego_yaw=0, ego_pitch=0, ego_roll=0;
+        double ego_x=0, ego_y=0, ego_z=0, ego_yaw=0, ego_pitch=0, ego_roll=0, ego_bb_center_to_rear_x=0, ego_bb_center_to_rear_y=0, ego_bb_center_to_rear_z=0;
         osi3::Identifier ego_id = currentIn.global_ground_truth().host_vehicle_id();
         normal_log("OSI","Looking for EgoVehicle with ID: %llu",ego_id.value());
         for_each(currentIn.global_ground_truth().moving_object().begin(),currentIn.global_ground_truth().moving_object().end(),
-            [this, ego_id, &ego_x, &ego_y, &ego_z, &ego_yaw, &ego_pitch, &ego_roll](const osi3::MovingObject& obj) {
+            [this, ego_id, &ego_x, &ego_y, &ego_z, &ego_yaw, &ego_pitch, &ego_roll, &ego_bb_center_to_rear_x, &ego_bb_center_to_rear_y, &ego_bb_center_to_rear_z](const osi3::MovingObject& obj) {
                 normal_log("OSI","MovingObject with ID %llu is EgoVehicle: %d",obj.id().value(), obj.id().value() == ego_id.value());
                 if (obj.id().value() == ego_id.value()) {
                     normal_log("OSI","Found EgoVehicle with ID: %llu",obj.id().value());
@@ -291,6 +335,9 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
                     ego_yaw = obj.base().orientation().yaw();
                     ego_pitch = obj.base().orientation().pitch();
                     ego_roll = obj.base().orientation().roll();
+                    ego_bb_center_to_rear_x = obj.vehicle_attributes().bbcenter_to_rear().x();
+                    ego_bb_center_to_rear_y = obj.vehicle_attributes().bbcenter_to_rear().y();
+                    ego_bb_center_to_rear_z = obj.vehicle_attributes().bbcenter_to_rear().z();
                 }
             });
         normal_log("OSI","Current Ego Position: %f,%f,%f", ego_x, ego_y, ego_z);
@@ -303,20 +350,27 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
         currentOut.mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
         /* Copy of SensorView */
         currentOut.add_sensor_view()->CopyFrom(currentIn);
+        /* Copy mounting position */
+        currentOut.mutable_mounting_position()->CopyFrom(currentIn.mounting_position());
 
         int i=0;
         double actual_range = fmi_nominal_range()*1.1;
         for_each(currentIn.global_ground_truth().moving_object().begin(),currentIn.global_ground_truth().moving_object().end(),
-            [this,&i,&currentIn,&currentOut,ego_id,ego_x,ego_y,ego_z,ego_yaw,ego_pitch,ego_roll,actual_range](const osi3::MovingObject& veh) {
+            [this,&i,&currentIn,&currentOut,ego_id,ego_x,ego_y,ego_z,ego_yaw,ego_pitch,ego_roll,ego_bb_center_to_rear_x,ego_bb_center_to_rear_y,ego_bb_center_to_rear_z,actual_range](const osi3::MovingObject& veh) {
                 if (veh.id().value() != ego_id.value()) {
-                    // NOTE: We currently do not take sensor mounting position into account,
-                    // i.e. sensor-relative coordinates are relative to center of bounding box
-                    // of ego vehicle currently.
-                    double trans_x = veh.base().position().x()-ego_x;
-                    double trans_y = veh.base().position().y()-ego_y;
-                    double trans_z = veh.base().position().z()-ego_z;
-                    double rel_x,rel_y,rel_z;
-                    rotatePoint(trans_x,trans_y,trans_z,ego_yaw,ego_pitch,ego_roll,rel_x,rel_y,rel_z);
+                    double rel_x, rel_y, rel_z;
+                    rel_x = veh.base().position().x();
+                    rel_y = veh.base().position().y();
+                    rel_z = veh.base().position().z();
+                    /* transform object coordinate to vehicle coordinate system */
+                    transformCoordinateGlobalToVehicle(rel_x, rel_y, rel_z,
+                        ego_x, ego_y, ego_z,
+                        ego_yaw, ego_pitch, ego_roll,
+                        ego_bb_center_to_rear_x, ego_bb_center_to_rear_y, ego_bb_center_to_rear_z);
+                    /* transform vehicle-relative coordinate to (virtual) sensor-relative coordinate */
+                    transformCoordinateVehicleToSensor(rel_x, rel_y, rel_z, 
+                        currentOut.mounting_position().position().x(), currentOut.mounting_position().position().y(), currentOut.mounting_position().position().z(),
+                        currentOut.mounting_position().orientation().yaw(), currentOut.mounting_position().orientation().pitch(), currentOut.mounting_position().orientation().roll());
                     double distance = sqrt(rel_x*rel_x + rel_y*rel_y + rel_z*rel_z);
                     if ((distance <= actual_range) && (rel_x/distance > 0.866025)) {
                         osi3::DetectedMovingObject *obj = currentOut.mutable_moving_object()->Add();
@@ -331,6 +385,9 @@ fmi2Status COSMPDummySensor::doCalc(fmi2Real currentCommunicationPoint, fmi2Real
                         obj->mutable_base()->mutable_dimension()->set_length(veh.base().dimension().length());
                         obj->mutable_base()->mutable_dimension()->set_width(veh.base().dimension().width());
                         obj->mutable_base()->mutable_dimension()->set_height(veh.base().dimension().height());
+                        obj->mutable_base()->mutable_orientation()->set_yaw(veh.base().orientation().yaw()-ego_yaw-currentOut.mounting_position().orientation().yaw());
+                        obj->mutable_base()->mutable_orientation()->set_pitch(veh.base().orientation().pitch()-ego_pitch-currentOut.mounting_position().orientation().pitch());
+                        obj->mutable_base()->mutable_orientation()->set_roll(veh.base().orientation().roll()-ego_roll-currentOut.mounting_position().orientation().roll());
                         
                         osi3::DetectedMovingObject::CandidateMovingObject* candidate = obj->add_candidate();
                         candidate->set_type(veh.type());
