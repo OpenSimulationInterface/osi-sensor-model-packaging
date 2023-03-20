@@ -164,25 +164,6 @@ fmi2Status COSMPDummySource::doExitInitializationMode()
     return fmi2OK;
 }
 
-void rotatePoint(double x, double y, double z,double yaw,double pitch,double roll,double &rx,double &ry,double &rz)
-{
-    double matrix[3][3];
-    double cos_yaw = cos(yaw);
-    double cos_pitch = cos(pitch);
-    double cos_roll = cos(roll);
-    double sin_yaw = sin(yaw);
-    double sin_pitch = sin(pitch);
-    double sin_roll = sin(roll);
-
-    matrix[0][0] = cos_yaw*cos_pitch;  matrix[0][1]=cos_yaw*sin_pitch*sin_roll - sin_yaw*cos_roll; matrix[0][2]=cos_yaw*sin_pitch*cos_roll + sin_yaw*sin_roll;
-    matrix[1][0] = sin_yaw*cos_pitch;  matrix[1][1]=sin_yaw*sin_pitch*sin_roll + cos_yaw*cos_roll; matrix[1][2]=sin_yaw*sin_pitch*cos_roll - cos_yaw*sin_roll;
-    matrix[2][0] = -sin_pitch;         matrix[2][1]=cos_pitch*sin_roll;                            matrix[2][2]=cos_pitch*cos_roll;
-
-    rx = matrix[0][0] * x + matrix[0][1] * y + matrix[0][2] * z;
-    ry = matrix[1][0] * x + matrix[1][1] * y + matrix[1][2] * z;
-    rz = matrix[2][0] * x + matrix[2][1] * y + matrix[2][2] * z;
-}
-
 fmi2Status COSMPDummySource::doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint)
 {
     DEBUGBREAK();
