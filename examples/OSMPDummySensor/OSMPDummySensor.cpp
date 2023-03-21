@@ -235,17 +235,12 @@ fmi2Status COSMPDummySensor::doExitInitializationMode()
 
     return fmi2OK;
 }
-
-void transposeRotationMatrix(double matrix_in[3][3], double matrix_trans[3][3]) {
-  for(int i=0; i < 3; i++)
-  {
-    for (int j = 0; j < 3; j++)
-    {
-      matrix_trans[j][i] = matrix_in[i][j];
-    }
-  }
-}
-
+/**
+ * @brief Rotate point with following order of rotation:
+ * 1. roll (around x-axis) 2. pitch (around y-axis) 3. yaw (around z-axis);
+ * 
+ * Positive rotation is counter clockwise (right-hand rule).
+ */
 void rotatePointXYZ(double x, double y, double z,
     double yaw, double pitch, double roll,
     double &rx, double &ry, double &rz)
@@ -258,7 +253,6 @@ void rotatePointXYZ(double x, double y, double z,
     double sin_pitch = sin(pitch);
     double sin_roll = sin(roll);
 
-    /* order of rotation: roll (x-axis), pitch (y-axis), yaw (z-axis) */
     matrix[0][0] = cos_pitch*cos_yaw;                              matrix[0][1] = -cos_pitch*sin_yaw;                             matrix[0][2] = sin_pitch;
     matrix[1][0] = sin_roll*sin_pitch*cos_yaw + cos_roll*sin_yaw;  matrix[1][1] = -sin_roll*sin_pitch*sin_yaw + cos_roll*cos_yaw; matrix[1][2] = -sin_roll*cos_pitch;
     matrix[2][0] = -cos_roll*sin_pitch*cos_yaw + sin_roll*sin_yaw; matrix[2][1] = cos_roll*sin_pitch*sin_yaw + sin_roll*cos_yaw;  matrix[2][2] = cos_roll*cos_pitch;
