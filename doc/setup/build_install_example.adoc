@@ -18,8 +18,7 @@ Demonstrates a simple C network proxy that can send and receive OSI data via TCP
 
 **Prerequisites**
 
-* You have installed _cmake_ version 3.10.2 or higher.
-* You have installed _protobuf_ version 3.0.0 or higher.
+* You have installed all prerequisites according to the way of linking of your choice, as described in <<top-setting-up-osi>>.
 
 **Steps**
 
