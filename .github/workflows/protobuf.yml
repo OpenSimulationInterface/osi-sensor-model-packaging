@@ -2,8 +2,11 @@ name: ProtoBuf CI Builds
 
 on:
   push:
+    paths-ignore: [ .github/**, .gitmodules ]
   pull_request:
     branches: [ master ]
+  repository_dispatch:
+    types: [examples-build]
 
 # this is a test
 
@@ -58,5 +61,33 @@ jobs:
     - name: Build C++
       working-directory: examples/build
       run: cmake --build .
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3.1.2
+      with:
+        name: Examples
+        path: examples/build
 
-
+  update_interface_release:
+    name: Update OSI release
+    runs-on: ubuntu-22.04
+    needs: [build-osmp-examples]
+    if: ${{ github.event.client_payload }}
+    steps:
+      - name: Collect previous artifacts
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: Examples
+          path: examples/build
+      - name: Zip artifacts
+        uses: TheDoctor0/zip-release@0.6.2
+        with: 
+          filename: Examples.zip
+          path: examples/build
+      - name: Upload artifacts to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.MACHINE_USER_PAT }}
+          file: Examples.zip
+          tag: ${{ github.event.client_payload.tag }}
+          repo_name: ${{ github.event.client_payload.source_repo }}
