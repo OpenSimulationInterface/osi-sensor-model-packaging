@@ -3,6 +3,8 @@ name: ProtoBuf CI Builds
 on:
   push:
     paths-ignore: [ .github/**, .gitmodules ]
+    tags-ignore:
+      - '**'
   pull_request:
     branches: [ master ]
   repository_dispatch:
