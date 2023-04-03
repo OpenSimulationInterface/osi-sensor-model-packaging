@@ -37,20 +37,20 @@ jobs:
           git tag ${REPO_TAG}
       
       - name: GitHub Push
-        uses: ad-m/github-push-action@v0.6.0
+        uses: CasperWA/push-protected@v2.14.0
         with:
           # Token for the repo. Can be passed in using $\{{ secrets.GITHUB_TOKEN }}
-#           github_token: ${{ secrets.MACHINE_USER_PAT }}
-          github_token: ${{ secrets.TEST_USER_PAT }}
+          token: ${{ secrets.MACHINE_USER_PAT }}
+          branch: master
           # Determines if --tags is used
           tags: true
           force: true
+          unprotect_reviews: true
           
       - name: Trigger examples creation
         uses: peter-evans/repository-dispatch@v2
         with:
-#           token: ${{ secrets.MACHINE_USER_PAT }}
-          token: ${{ secrets.TEST_USER_PAT }}
+          token: ${{ secrets.MACHINE_USER_PAT }}
           event-type: examples-build
           client-payload: '{"tag": "${{ github.event.client_payload.tag }}", "source_repo": "${{ github.event.client_payload.source_repo }}"}'
 
