@@ -26,6 +26,11 @@ Traffic participant models consume `osi3::SensorView` as input and produce `osi3
 They may also consume `osi3::TrafficCommand` as input to allow control by a scenario engine or other coordinating function.
 They may also produce `osi3::TrafficCommandUpdate` as output to allow status responses to such control messages.
 
+Streaming update consumer models::
+This model type receives a streaming update input for further processing.
+Examples of this model type can be visualization, evaluation, or logging modules.
+Streaming update consumer models consume `osi3::StreamingUpdate` as input; if they produce any output, it is currently not specified as part of this standard.
+
 All models may also consume a global `osi3::GroundTruth` parameter during initialization.
 
 Complex models may combine various aspects of the above model types.
