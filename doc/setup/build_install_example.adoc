@@ -18,31 +18,7 @@ Demonstrates a simple C network proxy that can send and receive OSI data via TCP
 
 **Prerequisites**
 
-* You have installed _cmake_ version 3.10.2 or higher.
-* You have installed _protobuf_ version 3.0.0 or higher (or follow the instructions in the next section to build protobuf by using vcpkg on Windows).
-
-**Profobuf Installation (Windows)**
-
-Using vcpkg to properly build the required configurations of protobuf on Visual Studio (here VS 2017):
-
-. Install vcpkg as per the documentation, e.g. clone via git the bootstrap as needed
-. English Language pack needs to be installed for VS 2017 for vcpkg to work
-. Create a new triplet file for the required combination of static library linking with dynamic runtime (usually needed for dynamic linking to still work). Create a file named x64-windows-static-md-v141.cmake in the triplets directory with the following content:
-+
-----
-set(VCPKG_TARGET_ARCHITECTURE x64)
-set(VCPKG_CRT_LINKAGE dynamic)
-set(VCPKG_LIBRARY_LINKAGE static)
-set(VCPKG_PLATFORM_TOOLSET "v141")
-----
-+
-*Note*: only need the v141 suffix and setting of VCPKG_PLATFORM_TOOLSET to ensure VS 2017 is selected if you have newer VS installed.
-
-. Now the protobuf libraries can be built automatically using:
-+
-----
-vcpkg.exe install protobuf:x64-windows-static-md-v141
-----
+* You have installed all prerequisites according to the way of linking of your choice, as described in <<top-setting-up-osi>>.
 
 **Steps**
 
@@ -65,21 +41,20 @@ git submodule update --init
 ----
 +
 . Run cmake and build
-.. If you followed the protobuf installation instructions for Windows above you can use the built protobuf libraries to automatically build the examples by specifying the triplet and toolchain file from VCPKG on the cmake configuration command-line:
+.. If you followed the protobuf installation instructions for Windows using vcpkg, you can use the built protobuf libraries to automatically build the examples by specifying the triplet and toolchain file from VCPKG on the cmake configuration command-line:
 +
 ----
 cd examples
 mkdir build
 cd build
-cmake .. -DVCPKG_TARGET_TRIPLET=x64-windows-static-md-v141 -DCMAKE_TOOLCHAIN_FILE=../../../vcpkg/scripts/buildsystems/vcpkg.cmake -G 'Visual Studio 15 2017 Win64'
+cmake .. -DVCPKG_TARGET_TRIPLET=x64-windows-static-md -DCMAKE_TOOLCHAIN_FILE=../../../vcpkg/scripts/buildsystems/vcpkg.cmake
 cmake –-build .
 ----
 +
 
 The CMAKE_TOOLCHAIN_FILE must point to your vcpkg directory, which in this example was parallel to the osi-sensor-model-packaging directory.
-This might complain somewhat depending on cmake and compiler settings, but builds without problems (and should support release and debug builds out of the box).
 
-.. If you did not install and build protobuf as explained above, use:
+.. If you did not install and build protobuf using vcpkg, use:
 +
 ----
 cd examples

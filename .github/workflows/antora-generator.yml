@@ -4,6 +4,7 @@ name: Antora build trigger
 on:
   push:
     branches: [ master ]
+    paths-ignore: [ .gitlab/**, .gitmodules ]
   pull_request:
     branches: [ master ]
 

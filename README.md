@@ -5,9 +5,7 @@
 OSI Sensor Model Packaging specifies ways in which models (like e.g. environmental effect models, sensor models and logical models) using the [Open Simulation Interface (OSI)][] are to be packaged for their use in simulation environments using FMI 2.0.
 The specification can be found in the [doc/osi-sensor-model-packaging_spec.adoc](doc/osi-sensor-model-packaging_spec.adoc) document in this repository.
 
-For more detailed information see the [official documentation](https://opensimulationinterface.github.io/osi-documentation/#_osi_sensor_model_packaging).
-
-<!-- TODO: Update link with new Antora hosting -->
+For more detailed information see the [official documentation](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/sensor-model/misc/introduction.html).
 
 [Open Simulation Interface (OSI)]: https://github.com/OpenSimulationInterface/open-simulation-interface
 
