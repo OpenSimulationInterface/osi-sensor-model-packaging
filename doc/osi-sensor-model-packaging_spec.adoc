@@ -32,6 +32,8 @@ include::./spec/traffic_command_update_outputs.adoc[leveloffset=+2]
 
 include::./spec/traffic_update_outputs.adoc[leveloffset=+2]
 
+include::./spec/streaming_update_inputs.adoc[leveloffset=+2]
+
 == Examples
 
 include::./setup/build_install_example.adoc[leveloffset=+2]
