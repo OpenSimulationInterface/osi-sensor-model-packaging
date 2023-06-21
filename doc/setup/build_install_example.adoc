@@ -40,32 +40,27 @@ cd osi-sensor-model-packaging
 git submodule update --init
 ----
 +
-. Switch to the `examples/` directory.
+. Run cmake and build
+.. If you followed the protobuf installation instructions for Windows using vcpkg, you can use the built protobuf libraries to automatically build the examples by specifying the triplet and toolchain file from VCPKG on the cmake configuration command-line:
 +
 ----
 cd examples
-----
-+
-. Create a new directory called `build/`.
-+
-----
-mkdir -p build
-----
-+
-. Switch to the `build/` directory.
-+
-----
+mkdir build
 cd build
+cmake .. -DVCPKG_TARGET_TRIPLET=x64-windows-static-md -DCMAKE_TOOLCHAIN_FILE=../../../vcpkg/scripts/buildsystems/vcpkg.cmake
+cmake –-build .
 ----
 +
-. Run _cmake_ in the parent directory.
+
+The CMAKE_TOOLCHAIN_FILE must point to your vcpkg directory, which in this example was parallel to the osi-sensor-model-packaging directory.
+
+.. If you did not install and build protobuf using vcpkg, use:
 +
 ----
+cd examples
+mkdir build
+cd build
 cmake ..
-----
-+
-. Run _cmake_ build.
-+
-----
 cmake --build .
 ----
++
