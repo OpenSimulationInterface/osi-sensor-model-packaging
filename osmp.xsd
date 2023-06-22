@@ -7,7 +7,7 @@
         <xs:complexType>
             <xs:attribute name="version" use="required">
                 <xs:simpleType>
-                    <xs:restriction base="xs:string"><xs:pattern value="[1-3][.][0-9][.][0-9]+"></xs:pattern></xs:restriction>
+                    <xs:restriction base="xs:string"><xs:pattern value="[13][.][0-9][.][0-9]+"></xs:pattern></xs:restriction>
                 </xs:simpleType>
             </xs:attribute>
             <xs:attribute name="osi-version" type="xs:string" use="optional"/>
