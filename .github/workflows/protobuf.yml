@@ -2,6 +2,8 @@ name: ProtoBuf CI Builds
 
 on:
   push:
+    branches:
+      - '**'
     paths-ignore: [ .github/**, .gitmodules ]
     tags-ignore:
       - '**'
