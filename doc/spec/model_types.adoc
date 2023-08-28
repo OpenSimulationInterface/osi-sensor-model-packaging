@@ -4,7 +4,7 @@ include::{root-path}_config.adoc[]
 endif::[]
 = Model types
 
-The current specification supports packaging the following model types as _Functional Mock-up Units_ (FMUs):
+The current specification supports packaging the following model types as _Functional Mock-up Units_ (FMUs). A model can alternatively be packaged as an OSI-compliant system according to the _System Structure and Parameterization_ (SSP) standard, consisting of multiple FMUs.
 
 Environmental effect model::
 This model type can be used to model environmental effects or the physical parts of sensors.
