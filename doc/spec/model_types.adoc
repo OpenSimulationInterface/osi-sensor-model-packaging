@@ -23,8 +23,8 @@ This model type is used to model whole traffic participants, such as vehicles or
 Traffic participant models may internally use environmental effect models, sensor models, or logical models as part of a modeled autonomous vehicle.
 They may also be used to implement surrounding traffic in simplified ways.
 Traffic participant models consume `osi3::SensorView` as input and produce `osi3::TrafficUpdate` as output.
-They may also consume `osi3::TrafficCommand` as input to allow control by a scenario engine or other coordinating function.
-They may also produce `osi3::TrafficCommandUpdate` as output to allow status responses to such control messages.
+They may additionally consume `osi3::TrafficCommand` as input to allow control by a scenario engine or other coordinating function.
+They may additionally produce `osi3::TrafficCommandUpdate` as output to allow status responses to such control messages.
 
 Streaming update consumer models::
 This model type receives a streaming update input for further processing.
