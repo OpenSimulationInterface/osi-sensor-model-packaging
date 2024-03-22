@@ -5,17 +5,17 @@ endif::[]
 = Ground truth initialization parameters
 
 All models can optionally consume `osi3::GroundTruth` via an initialization parameter called `OSMPGroundTruthInit`.
-Its purpose is to provide the model with a view of the static environment, for example the map, in OSI format.
+Its purpose is to provide the model with information that is constant throughout the simulation, for example the map in OSI format or the model_reference of a MovingObject.
 
-`OSMPGroundTruthInit` contains all static data encountered by the model during a simulation run, for example, roads.
-All data provided in this message can be assumed by the receiver to be static during the simulation run.
+`OSMPGroundTruthInit` contains all constant data encountered by the model during a simulation run, for example, roads.
+All data provided in this message can be assumed by the receiver to be constant during the simulation run.
 
 If the model is instantiated multiple times, all instantiations should receive the exact same content.
-This allows a model to do expensive map calculations only once during initialization, and to share the calculated data between multiple instantiations.
+This allows a model to do expensive map calculations or loading 3D assets only once during initialization, and to share the calculated data between multiple instantiations.
 
 **Prefix**
 
-Ground truth initialization paramters shall be named with the following prefix:
+Ground truth initialization parameters shall be named with the following prefix:
 
 [source,protobuf]
 ----
@@ -28,7 +28,7 @@ OSMPGroundTruthInit
 * `OSMPGroundTruthInit` shall be defined as a notional discrete binary input parameter variable, with `@causality="parameter"`, `@variability="fixed"` and `@initial="exact"`.
 * The MIME type of the variable shall specify the `type=GroundTruth` as part of the MIME type parameters.
 * `OSMPGroundTruthInit` shall be encoded as `osi3::GroundTruth`.
-* `OSMPGroundTruthInit` shall contain all static data encountered by the model during a simulation run.
+* `OSMPGroundTruthInit` shall contain all constant data encountered by the model during a simulation run.
 * The IDs of objects in `OSMPGroundTruthInit` shall be identical to the IDs of the same objects contained in later `OSMPSensorViewIn` or other input data.
 * If the model is instantiated multiple times, then all instantiations should receive the exact same content stored in the `OSMPGroundTruthInit` parameter.
 * The guaranteed lifetime of the ground-truth protocol-buffer pointer provided as input to the FMU shall be from the time of the call to `fmi2SetInteger` that provides those values until the end of the following `fmi2ExitInitializationMode` call.
