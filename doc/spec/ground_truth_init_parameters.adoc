@@ -5,7 +5,7 @@ endif::[]
 = Ground truth initialization parameters
 
 All models can optionally consume `osi3::GroundTruth` via an initialization parameter called `OSMPGroundTruthInit`.
-Its purpose is to provide the model with information that is constant throughout the simulation, for example the map in OSI format or the model_reference of a MovingObject.
+Its purpose is to provide the model with information that does not change throughout the simulation, for example the map in OSI format or the model_reference of a MovingObject.
 
 `OSMPGroundTruthInit` contains all constant data encountered by the model during a simulation run, for example, roads.
 All data provided in this message can be assumed by the receiver to be constant during the simulation run.
