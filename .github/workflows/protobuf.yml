@@ -1,5 +1,10 @@
 name: ProtoBuf CI Builds
 
+env:
+  PROTOBUF_VERSION: 3.20.1
+  PROTOBUF_VARIANT: '-all' # Use '-all' prior to 22.0, '' after
+  ABSEIL_VERSION: 20230802.1
+
 on:
   push:
     branches:
@@ -22,52 +27,58 @@ jobs:
 
     steps:
     - name: Checkout OSI
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         submodules: true
 
     - name: Setup Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.7'
+        python-version: '3.8'
 
-    # cache dependencies
     - name: Cache Dependencies
       id: cache-depends
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
-        path: protobuf-3.15.8
+        path: protobuf-${{ env.PROTOBUF_VERSION }}
         key: ${{ runner.os }}-v2-depends
 
-    # Download and build protobuf
-    - name: Download ProtoBuf
+    - name: Download ProtoBuf ${{ env.PROTOBUF_VERSION }}
       if: steps.cache-depends.outputs.cache-hit != 'true'
-      run: curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.15.8/protobuf-all-3.15.8.tar.gz && tar xzvf protobuf-all-3.15.8.tar.gz
+      run: curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${{env.PROTOBUF_VERSION}}/protobuf${{env.PROTOBUF_VARIANT}}-${{env.PROTOBUF_VERSION}}.tar.gz && tar xzvf protobuf${{env.PROTOBUF_VARIANT}}-${{env.PROTOBUF_VERSION}}.tar.gz
 
-    - name: Build ProtoBuf
-      if: steps.cache-depends.outputs.cache-hit != 'true'
-      working-directory: protobuf-3.15.8
+    - name: Download Abseil ${{ env.ABSEIL_VERSION }}
+      if: steps.cache-depends.outputs.cache-hit != 'true' && env.PROTOBUF_VARIANT == ''
+      run: curl -OL https://github.com/abseil/abseil-cpp/archive/refs/tags/${{env.ABSEIL_VERSION}}.tar.gz && tar xzvf ${{env.ABSEIL_VERSION}}.tar.gz && rm -rf protobuf-${{env.PROTOBUF_VERSION}}/third_party/abseil-cpp && mv abseil-cpp-${{env.ABSEIL_VERSION}} protobuf-${{env.PROTOBUF_VERSION}}/third_party/abseil-cpp
+
+    - name: Build ProtoBuf ${{ env.PROTOBUF_VERSION }} via autotools
+      if: steps.cache-depends.outputs.cache-hit != 'true' && env.PROTOBUF_VARIANT == '-all'
+      working-directory: protobuf-${{ env.PROTOBUF_VERSION }}
       run: ./configure DIST_LANG=cpp --prefix=/usr && make
 
-    - name: Install ProtoBuf
-      working-directory: protobuf-3.15.8
+    - name: Build ProtoBuf ${{ env.PROTOBUF_VERSION }} via cmake
+      if: steps.cache-depends.outputs.cache-hit != 'true' && env.PROTOBUF_VARIANT == ''
+      working-directory: protobuf-${{ env.PROTOBUF_VERSION }}
+      run: cmake -DCMAKE_CXX_STANDARD=17 -Dprotobuf_BUILD_SHARED_LIBS=ON -Dprotobuf_BUILD_TESTS=OFF . && cmake --build . --config Release -j 4
+
+    - name: Install ProtoBuf ${{ env.PROTOBUF_VERSION }}
+      working-directory: protobuf-${{ env.PROTOBUF_VERSION }}
       run: sudo make install && sudo ldconfig
 
-    # prepare build
     - name: Prepare C++ Build
       working-directory: examples
       run: mkdir build
 
-    - name: cmake prepare
+    - name: Configure C++ Build
       working-directory: examples/build
-      run: cmake -D CMAKE_PREFIX_PATH:PATH=${DEPS_DIR}/protobuf/install ..
+      run: cmake ${{ env.PROTOBUF_VARIANT =='' && '-DCMAKE_CXX_STANDARD=17' }} ..
 
     - name: Build C++
       working-directory: examples/build
-      run: cmake --build .
-    
+      run: cmake --build . --config Release -j 4
+
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3.1.2
+      uses: actions/upload-artifact@v4
       with:
         name: Examples
         path: examples/build
@@ -79,12 +90,12 @@ jobs:
     if: ${{ github.event.client_payload }}
     steps:
       - name: Collect previous artifacts
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@v4
         with:
           name: Examples
           path: examples/build
       - name: Zip artifacts
-        uses: TheDoctor0/zip-release@0.6.2
+        uses: TheDoctor0/zip-release@0.7.6
         with: 
           filename: Examples.zip
           path: examples/build
