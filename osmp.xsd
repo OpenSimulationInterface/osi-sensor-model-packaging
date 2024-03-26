@@ -23,6 +23,7 @@
                         <xs:enumeration value="base.lo"/>
                         <xs:enumeration value="base.hi"/>
                         <xs:enumeration value="size"/>
+                        <xs:enumeration value="full"/>
                     </xs:restriction>
                 </xs:simpleType>
             </xs:attribute>

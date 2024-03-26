@@ -27,3 +27,10 @@ A simulator can call the FMU `fmi2DoStep` routine at this implied rate.
 If the step size is not supplied, the model communication rate is determined from any input configuration data the model provides, or it must be configured manually.
 
 The model may have inputs, outputs, and parameters that are not specified by OSMP if the model can be run correctly with all of those variables left unconnected and at their default values.
+
+== FMI 3.0
+
+Alternatively a model can be packaged as a valid FMU for co-simulation as specified in the FMI 3.0 standard cite:[fmi3.0].
+In this case, unless otherwise noted, all specifications in the FMI 3.0 cite:[fmi3.0] standard apply as-is.
+
+The provisions above for FMI 2.0 apply, with the provision that the annotation shall be placed into the `<Annotations>` element of the `modelDescription.xml`.
