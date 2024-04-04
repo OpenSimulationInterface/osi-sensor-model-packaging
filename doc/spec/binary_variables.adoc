@@ -87,7 +87,7 @@ The actual binary variable shall contain an annotation of the following form in 
 
 [source,xml]
 ----
-<Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="<prefix>" role="full" mime-type="<mime-type>"/></Tool>
+<Annotation type="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="<prefix>" role="full" mime-type="<mime-type>"/></Annotation>
 ----
 
 `<prefix>` is the prefix as defined above.
