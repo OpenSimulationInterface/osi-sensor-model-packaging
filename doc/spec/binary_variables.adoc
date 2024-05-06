@@ -95,6 +95,7 @@ The actual binary variable shall contain an annotation of the following form in 
 It is an error if there is not exactly one variable for the same name.
 
 The MIME type given in `@mime-type` shall be a valid MIME type specification.
+It shall be identical to the MIME type specification given in the `@mimeType` attribute of the binary variable element.
 
 In the case of OSI-specified data, the MIME type shall have the following form to indicate that the binary content is conformant to the given OSI version and contains a message of the given type:
 
