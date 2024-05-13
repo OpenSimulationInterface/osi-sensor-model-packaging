@@ -36,4 +36,4 @@ All models may also consume a global `osi3::GroundTruth` parameter during initia
 Complex models may combine various aspects of the above model types.
 Manual intervention is needed to configure and set up these FMUs.
 
-In implementations that support the use of the _System Structure and Parameterization_ (SSP) standard, a model can alternatively be packaged as a system consisting of multiple FMUs, if it presents the same interface at system level as this specification mandates for the overall model of the given type.
+In implementations that support the use of the _System Structure and Parameterization_ (SSP) standard cite:[ssp1.0], a model can alternatively be packaged as a system consisting of multiple FMUs, if it presents the same interface at system level as this specification mandates for the overall model of the given type.
