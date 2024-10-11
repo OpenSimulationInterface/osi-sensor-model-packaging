@@ -10,8 +10,6 @@
 
 #include "OSMPDummySensorConfig.h"
 
-using namespace std;
-
 #ifndef FMU_SHARED_OBJECT
 #define FMI2_FUNCTION_PREFIX OSMPDummySensor_
 #endif
@@ -122,7 +120,7 @@ protected:
 protected:
     /* Private File-based Logging just for Debugging */
 #ifdef PRIVATE_LOG_PATH
-    static ofstream private_log_file;
+    static std::ofstream private_log_file;
 #endif
 
     static void fmi_verbose_log_global(const char* format, ...) {
@@ -157,9 +155,9 @@ protected:
 #endif
 #ifdef PRIVATE_LOG_PATH
         if (!private_log_file.is_open())
-            private_log_file.open(PRIVATE_LOG_PATH, ios::out | ios::app);
+            private_log_file.open(PRIVATE_LOG_PATH, std::ios::out | std::ios::app);
         if (private_log_file.is_open()) {
-            private_log_file << "OSMPDummySensor" << "::" << instanceName << "<" << ((void*)this) << ">:" << category << ": " << buffer << endl;
+            private_log_file << "OSMPDummySensor" << "::" << instanceName << "<" << ((void*)this) << ">:" << category << ": " << buffer << std::endl;
             private_log_file.flush();
         }
 #endif
@@ -191,23 +189,23 @@ protected:
 
 protected:
     /* Members */
-    string instanceName;
+    std::string instanceName;
     fmi2Type fmuType;
-    string fmuGUID;
-    string fmuResourceLocation;
+    std::string fmuGUID;
+    std::string fmuResourceLocation;
     bool visible;
     bool loggingOn;
-    set<string> loggingCategories;
+    std::set<std::string> loggingCategories;
     fmi2CallbackFunctions functions;
     fmi2Boolean boolean_vars[FMI_BOOLEAN_VARS];
     fmi2Integer integer_vars[FMI_INTEGER_VARS];
     fmi2Real real_vars[FMI_REAL_VARS];
-    string string_vars[FMI_STRING_VARS];
+    std::string string_vars[FMI_STRING_VARS];
     bool simulation_started;
-    string* currentOutputBuffer;
-    string* lastOutputBuffer;
-    string* currentConfigRequestBuffer;
-    string* lastConfigRequestBuffer;
+    std::string* currentOutputBuffer;
+    std::string* lastOutputBuffer;
+    std::string* currentConfigRequestBuffer;
+    std::string* lastConfigRequestBuffer;
 
     /* Simple Accessors */
     fmi2Boolean fmi_valid() { return boolean_vars[FMI_BOOLEAN_VALID_IDX]; }
