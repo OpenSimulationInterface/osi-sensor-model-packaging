@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
+project(OSMPExamples)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/Modules/")
 
 # Set a default build type if none was specified
