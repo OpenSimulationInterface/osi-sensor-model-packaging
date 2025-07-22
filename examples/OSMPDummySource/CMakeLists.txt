@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 project(OSMPDummySource)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -23,7 +23,7 @@ string(MD5 FMUGUID modelDescription.in.xml)
 configure_file(modelDescription.in.xml modelDescription.xml @ONLY)
 configure_file(OSMPDummySourceConfig.in.h OSMPDummySourceConfig.h)
 
-find_package(Protobuf 2.6.1 REQUIRED)
+find_package(Protobuf REQUIRED)
 add_library(OSMPDummySource SHARED OSMPDummySource.cpp)
 set_target_properties(OSMPDummySource PROPERTIES PREFIX "")
 target_compile_definitions(OSMPDummySource PRIVATE "FMU_SHARED_OBJECT")
