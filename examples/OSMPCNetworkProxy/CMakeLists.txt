@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 project(OSMPCNetworkProxy)
 
 set(PUBLIC_LOGGING OFF CACHE BOOL "Enable logging via FMI logger")

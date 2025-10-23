@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
+project("OSMPExamples")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/Modules/")
 
 # Set a default build type if none was specified
@@ -29,11 +30,11 @@ set(OSMP_VERSION_PATCH ${CMAKE_MATCH_1})
 
 set(OSMPVERSION "${OSMP_VERSION_MAJOR}.${OSMP_VERSION_MINOR}.${OSMP_VERSION_PATCH}" CACHE STRING "OSMP Version String")
 
-add_subdirectory( open-simulation-interface )
+add_subdirectory( osi-cpp )
 
-get_directory_property(OSI_VERSION_MAJOR DIRECTORY open-simulation-interface DEFINITION VERSION_MAJOR)
-get_directory_property(OSI_VERSION_MINOR DIRECTORY open-simulation-interface DEFINITION VERSION_MINOR)
-get_directory_property(OSI_VERSION_PATCH DIRECTORY open-simulation-interface DEFINITION VERSION_PATCH)
+get_directory_property(OSI_VERSION_MAJOR DIRECTORY osi-cpp DEFINITION VERSION_MAJOR)
+get_directory_property(OSI_VERSION_MINOR DIRECTORY osi-cpp DEFINITION VERSION_MINOR)
+get_directory_property(OSI_VERSION_PATCH DIRECTORY osi-cpp DEFINITION VERSION_PATCH)
 set(OSIVERSION "${OSI_VERSION_MAJOR}.${OSI_VERSION_MINOR}.${OSI_VERSION_PATCH}")
 
 include_directories( includes )
