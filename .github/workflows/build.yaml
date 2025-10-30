@@ -1,0 +1,59 @@
+name: CI Builds
+
+on:
+  # execute on every PR made targeting the branches bellow
+  pull_request:
+    branches:
+      - main
+
+  # execute on every push
+  push:
+
+  # execute on trigger
+  repository_dispatch:
+    types: [examples-build]
+
+jobs:
+  build-osmp-examples:
+    name: Build OSMP Examples
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Get CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Cache vcpkg
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/vcpkg_cache
+          key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'CMakePresets.json') }}
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgJsonGlob: '**/examples/vcpkg.json'
+          vcpkgConfigurationJsonGlob: '**/examples/vcpkg-configuration.json'
+
+      - name: Build examples
+        uses: lukka/run-cmake@v10
+        env:
+          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
+        with:
+          cmakeListsTxtPath: "${{ github.workspace }}/examples/CMakeLists.txt"
+          configurePreset: vcpkg
+          buildPreset: vcpkg
+          buildPresetAdditionalArgs: "['--config Release']"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Examples-${{ runner.os }}
+          path: examples/build/**/*.fmu
