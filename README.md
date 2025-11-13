@@ -1,6 +1,6 @@
 # OSI Sensor Model Packaging
 
-[![ProtoBuf CI Builds](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging/actions/workflows/protobuf.yml/badge.svg)](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging/actions/workflows/protobuf.yml)
+[![CI Builds](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging/actions/workflows/build.yaml/badge.svg)](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging/actions/workflows/build.yaml)
 
 OSI Sensor Model Packaging specifies ways in which models (like e.g. environmental effect models, sensor models and logical models) using the [Open Simulation Interface (OSI)][] are to be packaged for their use in simulation environments using FMI 2.0.
 The specification can be found in the [doc/osi-sensor-model-packaging_spec.adoc](doc/osi-sensor-model-packaging_spec.adoc) document in this repository.
