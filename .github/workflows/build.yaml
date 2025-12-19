@@ -57,3 +57,41 @@ jobs:
         with:
           name: Examples-${{ runner.os }}
           path: examples/build/**/*.fmu
+
+  update_interface_release:
+    name: Update OSI release
+    runs-on: ubuntu-latest
+    needs: [build-osmp-examples]
+    if: ${{ github.event.client_payload }}
+    steps:
+      - name: Collect previous artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: Examples-*
+          path: examples
+      - name: Zip Windows
+        uses: TheDoctor0/zip-release@0.7.6
+        with: 
+          filename: Examples-Windows.zip
+          directory: examples
+          path: examples-Windows
+      - name: Zip Linux
+        uses: TheDoctor0/zip-release@0.7.6
+        with: 
+          filename: Examples-Linux.zip
+          directory: examples
+          path: examples-Linux
+      - name: Zip macOS
+        uses: TheDoctor0/zip-release@0.7.6
+        with: 
+          filename: Examples-macOS.zip
+          directory: examples
+          path: examples-macOS
+      - name: Upload artifacts to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.MACHINE_USER_PAT }}
+          file_glob: true
+          file: examples/Examples-*.zip
+          tag: ${{ github.event.client_payload.tag }}
+          repo_name: ${{ github.event.client_payload.source_repo }}
