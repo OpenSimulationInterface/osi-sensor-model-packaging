@@ -22,12 +22,13 @@ jobs:
         run: |
           git submodule init
           git submodule update --recursive --remote
-          cd examples/open-simulation-interface
+          cd examples/osi-cpp
           git checkout ${{ github.event.client_payload.tag }}
+          git submodule update
           cd ../..
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add .
+          git add examples/osi-cpp
           git commit -m "git submodule updated"
         continue-on-error: true
         
@@ -40,15 +41,13 @@ jobs:
           git tag ${REPO_TAG}
       
       - name: GitHub Push
-        uses: CasperWA/push-protected@v2.15.0
+        uses: ad-m/github-push-action@v0.6.0
         with:
           # Token for the repo. Can be passed in using $\{{ secrets.GITHUB_TOKEN }}
-          token: ${{ secrets.MACHINE_USER_PAT }}
-          branch: master
+          github_token: ${{ secrets.MACHINE_USER_PAT }}
           # Determines if --tags is used
           tags: true
           force: true
-          unprotect_reviews: true
           
       - name: Trigger examples creation
         uses: peter-evans/repository-dispatch@v2
