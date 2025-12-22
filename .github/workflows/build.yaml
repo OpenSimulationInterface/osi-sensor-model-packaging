@@ -74,19 +74,19 @@ jobs:
         with: 
           filename: Examples-Windows.zip
           directory: examples
-          path: examples-Windows
+          path: Examples-Windows
       - name: Zip Linux
         uses: TheDoctor0/zip-release@0.7.6
         with: 
           filename: Examples-Linux.zip
           directory: examples
-          path: examples-Linux
+          path: Examples-Linux
       - name: Zip macOS
         uses: TheDoctor0/zip-release@0.7.6
         with: 
           filename: Examples-macOS.zip
           directory: examples
-          path: examples-macOS
+          path: Examples-macOS
       - name: Upload artifacts to release
         uses: svenstaro/upload-release-action@v2
         with:
